@@ -10,7 +10,7 @@ import (
 var quotes = []string{"Dieser Junge hat keine Ahnung von go,", "aber das ist okay."}
 
 func handlerMain(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf(w, "View quotes at /quotes; submit them at /submit")
+	fmt.Fprintf(w, "View quotes at /quotes; submit them at /submit")
 }
 
 func handlerQuotes(w http.ResponseWriter, r *http.Request) {
