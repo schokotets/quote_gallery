@@ -17,7 +17,9 @@ func handlerQuotes(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprintf(w, "Hi there, I love quotes!\n\n")
 	fmt.Fprintf(w, strings.Join(quotes, "\n"))
+
 }
+
 
 
 
