@@ -4,18 +4,19 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"html/template"
 //	"strings"
 )
 
-type quote struct {
-	teacher	string
-	text	string
+type Quote struct {
+	Teacher	string
+	Text	string
 }
 
 
 
 
-var quotes []quote
+var quotes []Quote
 
 func handlerMain(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "View quotes at /quotes; submit them at /submit")
@@ -28,16 +29,11 @@ func handlerQuotes(w http.ResponseWriter, r *http.Request) {
 		    return
 		}
 
-		quotes = append(quotes, quote{teacher: r.FormValue("teacher"), text: r.FormValue("text")})
+		quotes = append(quotes, Quote{Teacher: r.FormValue("teacher"), Text: r.FormValue("text")})
 
 	}
-
-	for i,quote := range quotes {
-		fmt.Fprintf(w, "%i: %s %s\n",i, quote.teacher, quote.text)
-	}
-
-	//fmt.Fprintf(w, "\nHi there, I love quotes!\n\n")
-	//fmt.Fprintf(w, strings.Join(quotes, "\n"))
+	tmpl := template.Must(template.ParseFiles("quotes.html"))
+	tmpl.Execute(w, quotes)
 
 }
 
