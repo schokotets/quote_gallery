@@ -4,10 +4,18 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
+//	"strings"
 )
 
-var quotes = []string{"Dieser Junge hat keine Ahnung von go,", "aber das ist okay."}
+type quote struct {
+	teacher	string
+	text	string
+}
+
+
+
+
+var quotes []quote
 
 func handlerMain(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "View quotes at /quotes; submit them at /submit")
@@ -20,14 +28,16 @@ func handlerQuotes(w http.ResponseWriter, r *http.Request) {
 		    return
 		}
 
-		teacher := r.FormValue("teacher")
-		text := r.FormValue("text")
-		fmt.Fprintf(w, "teacher = %s\n", teacher)
-		fmt.Fprintf(w, "text = %s\n", text)
+		quotes = append(quotes, quote{teacher: r.FormValue("teacher"), text: r.FormValue("text")})
+
 	}
 
-	fmt.Fprintf(w, "\nHi there, I love quotes!\n\n")
-	fmt.Fprintf(w, strings.Join(quotes, "\n"))
+	for i,quote := range quotes {
+		fmt.Fprintf(w, "%i: %s %s\n",i, quote.teacher, quote.text)
+	}
+
+	//fmt.Fprintf(w, "\nHi there, I love quotes!\n\n")
+	//fmt.Fprintf(w, strings.Join(quotes, "\n"))
 
 }
 
