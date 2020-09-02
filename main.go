@@ -35,7 +35,13 @@ func handlerQuotes(w http.ResponseWriter, r *http.Request) {
 }
 
 func pageSubmit(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "submit.html")
+	teachers, err := getTeachers()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	tmpl := template.Must(template.ParseFiles("quotes.html"))
+	tmpl.Execute(w, teachers)
 }
 
 func main() {

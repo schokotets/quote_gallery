@@ -10,7 +10,11 @@
 		<input id="quotefield" name="text" type="text">
 		<br>
 		<label for="teacherfield">Lehrer:</label>
-		<input id="teacherfield" name="teacher" type="text">
+		<select id="teacherfield" name="teacherid">
+			{{range .}}
+			<option value="{{.Id}}">{{Name}}, {{.Title}}{{if .Note}} ({{.Note}}){{end}}</option>
+			{{end}}
+		</select>
 		<br>
 		<input type="submit">
 	</form>
