@@ -31,7 +31,6 @@ func handlerQuotes(w http.ResponseWriter, r *http.Request) {
 	}
 	tmpl := template.Must(template.ParseFiles("quotes.html"))
 	tmpl.Execute(w, quotes)
-
 }
 
 func pageSubmit(w http.ResponseWriter, r *http.Request) {
@@ -40,7 +39,7 @@ func pageSubmit(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	tmpl := template.Must(template.ParseFiles("quotes.html"))
+	tmpl := template.Must(template.ParseFiles("submit.html"))
 	tmpl.Execute(w, teachers)
 }
 

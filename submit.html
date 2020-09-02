@@ -12,7 +12,7 @@
 		<label for="teacherfield">Lehrer:</label>
 		<select id="teacherfield" name="teacherid">
 			{{range .}}
-			<option value="{{.Id}}">{{Name}}, {{.Title}}{{if .Note}} ({{.Note}}){{end}}</option>
+			<option value="{{.ID}}">{{.Name}}, {{.Title}}{{if .Note}} ({{.Note}}){{end}}</option>
 			{{end}}
 		</select>
 		<br>
