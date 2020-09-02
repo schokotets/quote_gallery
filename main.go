@@ -5,15 +5,8 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-	//	"strings"
+	"strconv"
 )
-
-type Quote struct {
-	Teacher string
-	Text    string
-}
-
-var quotes []Quote
 
 func handlerMain(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "View quotes at /quotes; submit them at /submit")
@@ -22,12 +15,23 @@ func handlerMain(w http.ResponseWriter, r *http.Request) {
 func handlerQuotes(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		if err := r.ParseForm(); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
 			fmt.Fprintf(w, "ParseForm() err: %v", err)
 			return
 		}
 
-		quotes = append(quotes, Quote{Teacher: r.FormValue("teacher"), Text: r.FormValue("text")})
-
+		teacherid, err := strconv.Atoi(r.FormValue("teacherid"))
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, "Form field teacherid is not an integer")
+			return
+		}
+		storeQuote(r.FormValue("quote"), teacherid)
+	}
+	quotes, err := getQuotes()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 	tmpl := template.Must(template.ParseFiles("quotes.html"))
 	tmpl.Execute(w, quotes)
