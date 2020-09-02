@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"quote_gallery/database"
 	//	"strings"
 )
 
@@ -40,7 +41,8 @@ func pageSubmit(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	log.Print("Connecting to database on :5432")
-	setupDatabase()
+	database.SetupDatabase()
+	defer database.CloseDatabase()
 
 	log.Print("Starting website on :8080")
 	http.HandleFunc("/", handlerMain)
