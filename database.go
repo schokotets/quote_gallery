@@ -10,6 +10,19 @@ import (
 	_ "github.com/lib/pq"
 )
 
+type teacher struct {
+	ID    int
+	Name  string
+	Title string
+	Note  string
+}
+
+type quote struct {
+	ID      int
+	Teacher teacher
+	Text    string
+}
+
 var database *sql.DB
 
 func setupDatabase() {
@@ -45,16 +58,38 @@ func storeQuote(quote string, teacherid int) error {
 	return nil
 }
 
-func storeTeacher(name string, title string) error {
+func storeTeacher(name string, title string, note string) error {
 	database.Ping()
 
-	_, err := database.Exec("INSERT INTO teachers (name, title) VALUES ($1, $2)", name, title)
+	_, err := database.Exec("INSERT INTO teachers (name, title, note) VALUES ($1, $2, $3)", name, title, note)
 	if err != nil {
 		log.Print("Cannot store teacher: ", err)
 		return err
 	}
 
 	return nil
+}
+
+func getTeachers() ([]teacher, error) {
+
+	rows, err := database.Query("SELECT id,name,note,title FROM teachers")
+	defer rows.Close()
+
+	if err != nil {
+		log.Print("Cannot get teachers: ", err)
+		return nil, err
+	}
+
+	var teachers []teacher
+
+	for rows.Next() {
+		t := teacher{}
+		rows.Scan(&t.ID, &t.Name, &t.Note, &t.Title)
+
+		teachers = append(teachers, t)
+	}
+
+	return teachers, nil
 }
 
 func closeDatabase() {
