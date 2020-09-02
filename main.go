@@ -27,9 +27,9 @@ func handlerQuotes(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "Form field teacherid is not an integer")
 			return
 		}
-		storeQuote(r.FormValue("quote"), teacherid)
+		database.StoreQuote(r.FormValue("text"), teacherid)
 	}
-	quotes, err := getQuotes()
+	quotes, err := database.GetQuotes()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -39,7 +39,7 @@ func handlerQuotes(w http.ResponseWriter, r *http.Request) {
 }
 
 func pageSubmit(w http.ResponseWriter, r *http.Request) {
-	teachers, err := getTeachers()
+	teachers, err := database.GetTeachers()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
