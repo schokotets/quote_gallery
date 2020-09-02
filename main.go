@@ -2,19 +2,16 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
-	"html/template"
-//	"strings"
+	//	"strings"
 )
 
 type Quote struct {
-	Teacher	string
-	Text	string
+	Teacher string
+	Text    string
 }
-
-
-
 
 var quotes []Quote
 
@@ -25,8 +22,8 @@ func handlerMain(w http.ResponseWriter, r *http.Request) {
 func handlerQuotes(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		if err := r.ParseForm(); err != nil {
-		    fmt.Fprintf(w, "ParseForm() err: %v", err)
-		    return
+			fmt.Fprintf(w, "ParseForm() err: %v", err)
+			return
 		}
 
 		quotes = append(quotes, Quote{Teacher: r.FormValue("teacher"), Text: r.FormValue("text")})
@@ -41,9 +38,10 @@ func pageSubmit(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "submit.html")
 }
 
-
-
 func main() {
+	log.Print("Connecting to database on :5432")
+	setupDatabase()
+
 	log.Print("Starting website on :8080")
 	http.HandleFunc("/", handlerMain)
 	http.HandleFunc("/quotes", handlerQuotes)
