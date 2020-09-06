@@ -11,6 +11,10 @@ import (
 	_ "github.com/lib/pq"
 )
 
+/* -------------------------------------------------------------------------- */
+/*                                Public Types                                */
+/* -------------------------------------------------------------------------- */
+
 // Teacher struct
 type Teacher struct {
 	ID    int
@@ -21,12 +25,23 @@ type Teacher struct {
 
 // Quote struct
 type Quote struct {
-	ID      int
-	Teacher Teacher
-	Text    string
+	ID          int
+	Teacher     Teacher
+	Text        string
+	MatchRating float32
+}
+
+type searchCacheType struct {
+	totalCount    int
+	countByQuotes map[int]int
 }
 
 var database *sql.DB
+var searchCache map[string]searchCacheType
+
+/* -------------------------------------------------------------------------- */
+/*                              Public Functions                              */
+/* -------------------------------------------------------------------------- */
 
 // SetupDatabase is a function to setup the database
 func SetupDatabase() {
@@ -34,20 +49,23 @@ func SetupDatabase() {
 
 	database, err = sql.Open("postgres", "user=postgres password=1234 dbname=quote_gallery sslmode=disable")
 	if err != nil {
-		log.Fatal("Cannot open Database: ", err)
+		log.Fatal("From SetupDatabase: ", err)
 	}
 
 	_, err = database.Exec("CREATE TABLE IF NOT EXISTS teachers (id serial PRIMARY KEY, name varchar, note varchar, title varchar)")
 	if err != nil {
 		database.Close()
-		log.Fatal("Cannot create teachers table: ", err)
+		log.Fatal("From SetupDatabase: ", err)
 	}
 
 	_, err = database.Exec("CREATE TABLE IF NOT EXISTS quotes (id serial PRIMARY KEY, teacherid integer REFERENCES teachers (id), text varchar)")
 	if err != nil {
 		database.Close()
-		log.Fatal("Cannot create quotes table: ", err)
+		log.Fatal("From SetupDatabase: ", err)
 	}
+
+	// Setup Search-Cache
+	setupSearchCache()
 }
 
 // StoreQuote is a function to store quotes
@@ -56,7 +74,7 @@ func StoreQuote(quote string, teacherid int) error {
 
 	_, err := database.Exec("INSERT INTO quotes (teacherid, text) VALUES ($1, $2)", teacherid, quote)
 	if err != nil {
-		log.Print("Cannot store quote: ", err)
+		log.Print("From StoreQuote: ", err)
 		return err
 	}
 
@@ -69,7 +87,7 @@ func StoreTeacher(name string, title string, note string) error {
 
 	_, err := database.Exec("INSERT INTO teachers (name, title, note) VALUES ($1, $2, $3)", name, title, note)
 	if err != nil {
-		log.Print("Cannot store teacher: ", err)
+		log.Print("From StoreTeacher: ", err)
 		return err
 	}
 
@@ -83,7 +101,7 @@ func GetTeachers() ([]Teacher, error) {
 	defer rows.Close()
 
 	if err != nil {
-		log.Print("Cannot get teachers: ", err)
+		log.Print("From GetTeachers: ", err)
 		return nil, err
 	}
 
@@ -106,7 +124,7 @@ func GetQuotes() ([]Quote, error) {
 	defer rows.Close()
 
 	if err != nil {
-		log.Print("Cannot get quotes: ", err)
+		log.Print("From GetQuotes: ", err)
 		return nil, err
 	}
 
@@ -114,6 +132,7 @@ func GetQuotes() ([]Quote, error) {
 
 	for rows.Next() {
 		q := Quote{}
+		q.MatchRating = 0
 		rows.Scan(&q.ID, &q.Text, &q.Teacher.ID, &q.Teacher.Name, &q.Teacher.Title, &q.Teacher.Note)
 		quotes = append(quotes, q)
 	}
@@ -124,4 +143,57 @@ func GetQuotes() ([]Quote, error) {
 // CloseDatabase is a function to close the database
 func CloseDatabase() {
 	database.Close()
+}
+
+/* -------------------------------------------------------------------------- */
+/*                              Private Functions                             */
+/* -------------------------------------------------------------------------- */
+
+func setupSearchCache() error {
+
+	log.Print("Creating Search-Cache from database")
+
+	// initialize character lookup table for words()
+	setupCharacterLookup()
+
+	// initialize the Search-Cache
+	searchCache = make(map[string]searchCacheType)
+
+	// Get all quotes from database
+	rows, err := database.Query("SELECT quotes.id, quotes.text FROM quotes")
+	defer rows.Close()
+
+	if err != nil {
+		log.Print("From setupSearchCache: ", err)
+		return err
+	}
+
+	//Iterrate over all quotes from database
+	for rows.Next() {
+		// Get id and text of quote
+		var text string = ""
+		var id int = 0
+		rows.Scan(&id, &text)
+
+		// Iterrate over all words of quote
+		for _, word := range words(text) {
+			searchCacheElement := searchCache[word]
+			searchCacheElement.totalCount++
+
+			if searchCacheElement.countByQuotes == nil {
+				searchCacheElement.countByQuotes = make(map[int]int)
+			}
+
+			// Read count, increment, write back
+			count := searchCacheElement.countByQuotes[id]
+			count++
+			searchCacheElement.countByQuotes[id] = count
+
+			searchCache[word] = searchCacheElement
+		}
+	}
+
+	log.Print("Search-Cache created")
+
+	return nil
 }
