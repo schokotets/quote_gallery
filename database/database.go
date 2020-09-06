@@ -73,11 +73,14 @@ func SetupDatabase() {
 func StoreQuote(text string, teacherid int) error {
 	database.Ping()
 
-	_, err := database.Exec("INSERT INTO quotes (teacherid, text) VALUES ($1, $2)", teacherid, text)
+	var id int
+	err := database.QueryRow("INSERT INTO quotes (teacherid, text) VALUES ($1, $2) RETURNING id", teacherid, text).Scan(&id)
 	if err != nil {
 		log.Print("From StoreQuote: ", err)
 		return err
 	}
+
+	addToSearchCache(text, id)
 
 	return nil
 }
@@ -152,7 +155,7 @@ func CloseDatabase() {
 
 func setupSearchCache() error {
 
-	log.Print("Creating Search-Cache from database")
+	log.Print("Creating Search-Cache from database...")
 
 	// initialize character lookup table for words()
 	setupCharacterLookup()
@@ -194,7 +197,7 @@ func setupSearchCache() error {
 		}
 	}
 
-	log.Print("Search-Cache created")
+	log.Print("Done")
 
 	return nil
 }
