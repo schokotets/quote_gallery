@@ -5,6 +5,7 @@ package database
 
 import (
 	"database/sql"
+	"errors"
 	"log"
 
 	// loading postgresql driver
@@ -69,10 +70,10 @@ func SetupDatabase() {
 }
 
 // StoreQuote is a function to store quotes
-func StoreQuote(quote string, teacherid int) error {
+func StoreQuote(text string, teacherid int) error {
 	database.Ping()
 
-	_, err := database.Exec("INSERT INTO quotes (teacherid, text) VALUES ($1, $2)", teacherid, quote)
+	_, err := database.Exec("INSERT INTO quotes (teacherid, text) VALUES ($1, $2)", teacherid, text)
 	if err != nil {
 		log.Print("From StoreQuote: ", err)
 		return err
@@ -194,6 +195,32 @@ func setupSearchCache() error {
 	}
 
 	log.Print("Search-Cache created")
+
+	return nil
+}
+
+func addToSearchCache(text string, id int) error {
+	if searchCache == nil {
+		log.Print("From addToSearchCache: searchCache is not initialized")
+		return errors.New("From addToSearchCache: searchCache is not initialized")
+	}
+
+	// Iterrate over all words of quote
+	for _, word := range words(text) {
+		searchCacheElement := searchCache[word]
+		searchCacheElement.totalCount++
+
+		if searchCacheElement.countByQuotes == nil {
+			searchCacheElement.countByQuotes = make(map[int]int)
+		}
+
+		// Read count, increment, write back
+		count := searchCacheElement.countByQuotes[id]
+		count++
+		searchCacheElement.countByQuotes[id] = count
+
+		searchCache[word] = searchCacheElement
+	}
 
 	return nil
 }
