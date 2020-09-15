@@ -11,6 +11,19 @@ func main() {
 	database.SetupDatabase()
 	defer database.CloseDatabase()
 
+	err := database.ExecuteQuery("START TRANSACTION")
+	if err != nil {
+		log.Fatal("Cannot start transaction: ", err)
+	}
+	err = database.ExecuteQuery("DELETE FROM quotes")
+	if err != nil {
+		log.Fatal("Cannot temp-delete quotes: ", err)
+	}
+	err = database.ExecuteQuery("DELETE FROM teachers")
+	if err != nil {
+		log.Fatal("Cannot temp-delete teachers: ", err)
+	}
+
 	database.StoreTeacher("Heimburg", "Herr", "")
 	database.StoreTeacher("Krug", "Herr", "")
 	database.StoreTeacher("Spreer", "Frau", "")
@@ -26,4 +39,6 @@ func main() {
 
 	j, _ := database.GetQuotes()
 	fmt.Println(j)
+
+	database.ExecuteQuery("ROLLBACK")
 }
