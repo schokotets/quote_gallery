@@ -43,10 +43,10 @@ func setupCharacterLookup() {
 // Processes a given string into a words
 // How the string is sliced is mainly dependend on the characterLookup which itself is created by setupCharacterLookup
 // setupCharacterLookup needs to have been called
-func getWordsFromString(s string) []string {
+func getWordsFromString(s string) map[string]uint32 {
 	var buffer bytes.Buffer
 	buffer.Reset()
-	var words []string
+	wordCountMap := make(map[string]uint32)
 	for _, r := range s {
 		var c byte = byte(r)
 
@@ -56,14 +56,14 @@ func getWordsFromString(s string) []string {
 		}
 
 		if buffer.Len() != 0 {
-			words = append(words, buffer.String())
+			wordCountMap[buffer.String()] = wordCountMap[buffer.String()] + 1
 			buffer.Reset()
 		}
 	}
 
 	if buffer.Len() != 0 {
-		words = append(words, buffer.String())
+		wordCountMap[buffer.String()] = wordCountMap[buffer.String()] + 1
 	}
 
-	return words
+	return wordCountMap
 }
