@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"log"
-	"sync"
 
 	// loading postgresql driver
 	_ "github.com/lib/pq"
@@ -43,11 +42,11 @@ type QuoteT struct {
 //
 type UnverifiedQuoteT struct {
 	uidQuote uint32
-	teacher  string
-	context  string
-	text     string
-	unixtime uint64
-	ipHash   uint64
+	Teacher  string
+	Context  string
+	Text     string
+	Unixtime uint64
+	IPHash   uint64
 }
 
 // TeacherT stores one teacher
@@ -57,9 +56,9 @@ type UnverifiedQuoteT struct {
 // note       optional notes, e.g. subjects
 type TeacherT struct {
 	uidTeacher uint32
-	name       string
-	title      string
-	note       string
+	Name       string
+	Title      string
+	Note       string
 }
 
 type wordsMapT struct {
@@ -93,7 +92,7 @@ var localDatabase struct {
 	quoteSlice   []QuoteT
 	teacherSlice []TeacherT
 	wordsMap     map[string]wordsMapT
-	mux          sync.Mutex
+	mux          Mutex
 }
 
 /* -------------------------------------------------------------------------- */
@@ -105,9 +104,6 @@ var localDatabase struct {
 // Create localDatabase from postgresDatabase
 func Setup() error {
 	var err error
-
-	localDatabase.mux.Lock()
-	defer localDatabase.mux.Unlock()
 
 	// Open PostgreSQL database
 	postgresDatabase, err = sql.Open(
@@ -179,18 +175,18 @@ func Setup() error {
 // GetTeachers returns a slice containing all teachers
 // The returned slice is not sorted
 func GetTeachers() *[]TeacherT {
-	localDatabase.mux.Lock()
+	localDatabase.mux.LockRead()
 	teacherSlice := localDatabase.teacherSlice
-	localDatabase.mux.Unlock()
+	localDatabase.mux.UnlockRead()
 	return &teacherSlice
 }
 
 // GetQuotes returns a slice containing all quotes
 // The weight variable will be zero
 func GetQuotes() *[]QuoteT {
-	localDatabase.mux.Lock()
+	localDatabase.mux.LockRead()
 	quoteSlice := localDatabase.quoteSlice
-	localDatabase.mux.Unlock()
+	localDatabase.mux.UnlockRead()
 	return &quoteSlice
 }
 
@@ -211,8 +207,55 @@ func GetQuotesByString() {
 // StoreTeacher stores a new teacher
 // If the uid is not zero, StoreTeacher will try to find the corresponding teacher and overwrite it
 // If the uid is nil a new teacher will be created
-func StoreTeacher(t TeacherT) {
+func StoreTeacher(t TeacherT) error {
+	var err error
 
+	// Verify connection to PostgreSQL database
+	err = postgresDatabase.Ping()
+	if err != nil {
+		postgresDatabase.Close()
+		return errors.New("At StoreTeacher: " + err.Error())
+	}
+
+	if t.uidTeacher == 0 {
+		// add teacher to postgresDatabase
+		err = postgresDatabase.QueryRow(
+			`INSERT INTO teachers (name, title, note) VALUES ($1, $2, $3) RETURNING uidTeacher`,
+			t.Name, t.Title, t.Note).Scan(&t.uidTeacher)
+		if err != nil {
+			return errors.New("At StoreTeacher: " + err.Error())
+		}
+
+		// add teacher to localDatabase
+		localDatabase.mux.LockWrite()
+		localDatabase.teacherSlice = append(localDatabase.teacherSlice, t)
+		localDatabase.mux.UnlockWrite()
+	} else {
+		// try to find corresponding entries postgresDatabase and overwrite them
+		var res sql.Result
+		res, err = postgresDatabase.Exec(
+			`UPDATE teachers SET name=$2, title=$3, note=$4 WHERE uidTeacher=$1`,
+			t.uidTeacher, t.Name, t.Title, t.Note)
+
+		// try to find corresponding entries in localDatabase and overwrite them
+		localDatabase.mux.LockWrite()
+		var localRowsAffected int = 0
+		for i, v := range localDatabase.teacherSlice {
+			if v.uidTeacher == t.uidTeacher {
+				localDatabase.teacherSlice[i] = t
+				localRowsAffected++
+			}
+		}
+		localDatabase.mux.UnlockWrite()
+
+		if tmp, _ := res.RowsAffected(); localRowsAffected == 0 || tmp == 0 {
+			return errors.New("At StoreTeacher: Could not update, becauase given uidTeacher was not found")
+		}
+	}
+
+	log.Print(localDatabase.teacherSlice)
+
+	return nil
 }
 
 // StoreQuote stores a new quote
@@ -240,9 +283,6 @@ func createLocalDatabase() error {
 	// initialize characterLookup table
 	setupCharacterLookup()
 
-	// initialize wordsMap of localDatabase
-	localDatabase.wordsMap = make(map[string]wordsMapT)
-
 	// Verify connection to PostgreSQL database
 	err = postgresDatabase.Ping()
 	if err != nil {
@@ -263,11 +303,18 @@ func createLocalDatabase() error {
 	if err != nil {
 		return errors.New("At createLocalDatabase: " + err.Error())
 	}
+
+	// initialize wordsMap of localDatabase
+	localDatabase.mux.LockWrite()
+	localDatabase.wordsMap = make(map[string]wordsMapT)
+	localDatabase.mux.UnlockWrite()
+
 	// Iterrate over all quotes from PostgreSQL database
 	for rows.Next() {
 		// Get id and text of quote
 		var q QuoteT
 		rows.Scan(&q.uidQuote, &q.uidTeacher, &q.context, &q.text, &q.unixtime, &q.upvotes)
+
 		// add to local database
 		err = addQuoteToLocalDatabase(q)
 		if err != nil {
@@ -289,13 +336,17 @@ func createLocalDatabase() error {
 	if err != nil {
 		return errors.New("At createLocalDatabase: " + err.Error())
 	}
+
 	// Iterate over all teachers from PostgreSQL database
 	for rows.Next() {
 		// Get id and text of quote
 		var t TeacherT
-		rows.Scan(&t.uidTeacher, &t.name, &t.title, &t.note)
+		rows.Scan(&t.uidTeacher, &t.Name, &t.Title, &t.Note)
+
 		// add to local database
-		addTeacherToLocalDatabase(t)
+		localDatabase.mux.LockWrite()
+		localDatabase.teacherSlice = append(localDatabase.teacherSlice, t)
+		localDatabase.mux.UnlockWrite()
 	}
 
 	rows.Close()
@@ -307,6 +358,9 @@ func createLocalDatabase() error {
 // Just adds quote to localDatabase (quoteSlice and wordsMap) without checking q.uidQuote
 // using addQuoteToLocalDatabase without checking if q.uidQuote already exists may be fatal
 func addQuoteToLocalDatabase(q QuoteT) error {
+
+	localDatabase.mux.LockWrite()
+	defer localDatabase.mux.UnlockWrite()
 
 	localDatabase.quoteSlice = append(localDatabase.quoteSlice, q)
 	enumid := len(localDatabase.quoteSlice) - 1
@@ -326,8 +380,4 @@ func addQuoteToLocalDatabase(q QuoteT) error {
 	}
 
 	return nil
-}
-
-func addTeacherToLocalDatabase(t TeacherT) {
-	localDatabase.teacherSlice = append(localDatabase.teacherSlice, t)
 }
