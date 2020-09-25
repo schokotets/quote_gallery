@@ -102,6 +102,8 @@ var localDatabase struct {
 // Setup initializes the database backend
 // Initialize postgres database
 // Create localDatabase from postgresDatabase
+//
+// Must be called only once at startup before any of the other database functions
 func Setup() error {
 	var err error
 
@@ -166,7 +168,8 @@ func Setup() error {
 		return errors.New("At Setup: " + err.Error())
 	}
 
-	createLocalDatabase()
+	localDatabase.mux.Setup()
+	loadLocalDatabase()
 
 	return nil
 
@@ -310,7 +313,7 @@ func DeleteQuote(ID int) {
 /*                              PRIVATE FUNCTIONS                             */
 /* -------------------------------------------------------------------------- */
 
-func createLocalDatabase() error {
+func loadLocalDatabase() error {
 	var err error
 
 	log.Print("Creating localDatabase from PostgreSQL database...")
@@ -323,6 +326,9 @@ func createLocalDatabase() error {
 	if err != nil {
 		return errors.New("At createLocalDatabase: " + err.Error())
 	}
+
+	localDatabase.mux.LockWrite()
+	defer localDatabase.mux.UnlockWrite()
 
 	/* --------------------------------- QUOTES --------------------------------- */
 
@@ -340,7 +346,7 @@ func createLocalDatabase() error {
 	}
 
 	// initialize wordsMap of localDatabase
-	setupWordMap()
+	localDatabase.wordsMap = make(map[string]wordsMapT)
 
 	// Iterrate over all quotes from PostgreSQL database
 	for rows.Next() {
@@ -349,7 +355,8 @@ func createLocalDatabase() error {
 		rows.Scan(&q.QuoteID, &q.TeacherID, &q.Context, &q.Text, &q.Unixtime, &q.Upvotes)
 
 		// add to local database
-		err = addQuoteToLocalDatabase(q)
+		// unsafe, because localDatabase is already locked for writing
+		err = unsafeAddQuoteToLocalDatabase(q)
 		if err != nil {
 			return errors.New("At createLocalDatabase: " + err.Error())
 		}
@@ -377,7 +384,8 @@ func createLocalDatabase() error {
 		rows.Scan(&t.TeacherID, &t.Name, &t.Title, &t.Note)
 
 		// add to local database
-		addTeacherToLocalDatabase(t)
+		// unsafe, because localDatabase is already locked for writing
+		unsafeAddTeacherToLocalDatabase(t)
 	}
 
 	rows.Close()
@@ -413,9 +421,35 @@ func addQuoteToLocalDatabase(q QuoteT) error {
 	return nil
 }
 
+func unsafeAddQuoteToLocalDatabase(q QuoteT) error {
+
+	localDatabase.quoteSlice = append(localDatabase.quoteSlice, q)
+	var enumid int32 = int32(len(localDatabase.quoteSlice) - 1)
+
+	if enumid < 0 {
+		return errors.New("At addQuoteToLocalDatabase: Could not add quote to quoteSlice of localDatabase")
+	}
+
+	// Iterrate over all words of quote
+	for word, count := range getWordsFromString(q.Text) {
+		wordsMapItem := localDatabase.wordsMap[word]
+		wordsMapItem.totalOccurences += count
+
+		wordsMapItem.occurenceSlice = append(wordsMapItem.occurenceSlice, occurenceSliceT{enumid, count})
+
+		localDatabase.wordsMap[word] = wordsMapItem
+	}
+
+	return nil
+}
+
 func addTeacherToLocalDatabase(t TeacherT) {
 	localDatabase.mux.LockWrite()
 	defer localDatabase.mux.UnlockWrite()
+	localDatabase.teacherSlice = append(localDatabase.teacherSlice, t)
+}
+
+func unsafeAddTeacherToLocalDatabase(t TeacherT) {
 	localDatabase.teacherSlice = append(localDatabase.teacherSlice, t)
 }
 
@@ -491,12 +525,6 @@ func overwriteQuoteInLocalDatabase(q QuoteT) error {
 	}
 
 	return nil
-}
-
-func setupWordMap() {
-	localDatabase.mux.LockWrite()
-	defer localDatabase.mux.UnlockWrite()
-	localDatabase.wordsMap = make(map[string]wordsMapT)
 }
 
 // PrintWordsMap is a debugging function
