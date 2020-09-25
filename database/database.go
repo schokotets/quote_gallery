@@ -179,8 +179,9 @@ func Setup() error {
 // The returned slice is not sorted
 func GetTeachers() *[]TeacherT {
 	localDatabase.mux.LockRead()
+	defer localDatabase.mux.UnlockRead()
 	teacherSlice := localDatabase.teacherSlice
-	localDatabase.mux.UnlockRead()
+
 	return &teacherSlice
 }
 
@@ -188,23 +189,40 @@ func GetTeachers() *[]TeacherT {
 // The weight variable will be zero
 func GetQuotes() *[]QuoteT {
 	localDatabase.mux.LockRead()
+	defer localDatabase.mux.UnlockRead()
 	quoteSlice := localDatabase.quoteSlice
-	localDatabase.mux.UnlockRead()
+
 	return &quoteSlice
 }
 
 // Close database backend
 func Close() {
+	localDatabase.mux.LockWrite()
 	localDatabase.quoteSlice = nil
 	localDatabase.teacherSlice = nil
 	localDatabase.wordsMap = nil
+	localDatabase.mux.UnlockWrite()
 	postgresDatabase.Close()
 }
 
 // GetQuotesByString returns a slice containing all quotes
 // The weight variable will indicate how well the given text matches the corresponding quote
-func GetQuotesByString() {
+func GetQuotesByString(text string) *[]QuoteT {
 
+	localDatabase.mux.LockRead()
+	defer localDatabase.mux.UnlockRead()
+
+	quoteSlice := localDatabase.quoteSlice
+
+	for word, count := range getWordsFromString(text) {
+		wordsMapItem := localDatabase.wordsMap[word]
+
+		_ = count
+		for _, v := range wordsMapItem.occurenceSlice {
+			quoteSlice[v.enumid].Match += float32(v.count) / float32(wordsMapItem.totalOccurences)
+		}
+	}
+	return &quoteSlice
 }
 
 // StoreTeacher stores a new teacher
@@ -509,6 +527,7 @@ func overwriteQuoteInLocalDatabase(q QuoteT) error {
 					wordsMapItem.occurenceSlice = wordsMapItem.occurenceSlice[:iMax]
 					localDatabase.wordsMap[word] = wordsMapItem
 				}
+				break
 			}
 		}
 	}
