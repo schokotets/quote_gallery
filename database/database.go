@@ -96,7 +96,7 @@ var localDatabase struct {
 }
 
 /* -------------------------------------------------------------------------- */
-/*                              GLOBAL FUNCTIONS                              */
+/*                         EXPORTED GENERAL FUNCTIONS                         */
 /* -------------------------------------------------------------------------- */
 
 // Setup initializes the database backend
@@ -175,15 +175,19 @@ func Setup() error {
 
 }
 
-// GetTeachers returns a slice containing all teachers
-// The returned slice is not sorted
-func GetTeachers() *[]TeacherT {
-	localDatabase.mux.LockRead()
-	defer localDatabase.mux.UnlockRead()
-	teacherSlice := localDatabase.teacherSlice
-
-	return &teacherSlice
+// Close database backend
+func Close() {
+	localDatabase.mux.LockWrite()
+	localDatabase.quoteSlice = nil
+	localDatabase.teacherSlice = nil
+	localDatabase.wordsMap = nil
+	localDatabase.mux.UnlockWrite()
+	postgresDatabase.Close()
 }
+
+/* -------------------------------------------------------------------------- */
+/*                          EXPORTED QUOTES FUNCTIONS                         */
+/* -------------------------------------------------------------------------- */
 
 // GetQuotes returns a slice containing all quotes
 // The weight variable will be zero
@@ -193,16 +197,6 @@ func GetQuotes() *[]QuoteT {
 	quoteSlice := localDatabase.quoteSlice
 
 	return &quoteSlice
-}
-
-// Close database backend
-func Close() {
-	localDatabase.mux.LockWrite()
-	localDatabase.quoteSlice = nil
-	localDatabase.teacherSlice = nil
-	localDatabase.wordsMap = nil
-	localDatabase.mux.UnlockWrite()
-	postgresDatabase.Close()
 }
 
 // GetQuotesByString returns a slice containing all quotes
@@ -223,55 +217,6 @@ func GetQuotesByString(text string) *[]QuoteT {
 		}
 	}
 	return &quoteSlice
-}
-
-// StoreTeacher stores a new teacher
-// If the ID is not zero, StoreTeacher will try to find the corresponding teacher and overwrite it
-// If the ID is nil a new teacher will be created
-func StoreTeacher(t TeacherT) error {
-	var err error
-
-	// Verify connection to PostgreSQL database
-	err = postgresDatabase.Ping()
-	if err != nil {
-		postgresDatabase.Close()
-		return errors.New("At StoreTeacher: " + err.Error())
-	}
-
-	if t.TeacherID == 0 {
-		// add teacher to postgresDatabase
-		err = postgresDatabase.QueryRow(
-			`INSERT INTO teachers (Name, Title, Note) VALUES ($1, $2, $3) RETURNING TeacherID`,
-			t.Name, t.Title, t.Note).Scan(&t.TeacherID)
-		if err != nil {
-			return errors.New("At StoreTeacher: " + err.Error())
-		}
-
-		// add teacher to localDatabase
-		addTeacherToLocalDatabase(t)
-	} else {
-		// try to find corresponding entry postgresDatabase and overwrite it
-		var res sql.Result
-		res, err = postgresDatabase.Exec(
-			`UPDATE teachers SET Name=$2, Title=$3, Note=$4 WHERE TeacherID=$1`,
-			t.TeacherID, t.Name, t.Title, t.Note)
-		if err != nil {
-			return errors.New("At StoreTeacher: " + err.Error())
-		}
-		if rowsAffected, _ := res.RowsAffected(); rowsAffected != 0 {
-			return errors.New("At StoreTeacher: Could not find specified entry for overwrite")
-		}
-
-		// try to find corresponding entry in localDatabase and overwrite it
-		err = overwriteTeacherInLocalDatabase(t)
-		if err != nil {
-			return errors.New("At StoreTeacher: " + err.Error())
-		}
-	}
-
-	log.Print(localDatabase.teacherSlice)
-
-	return nil
 }
 
 // StoreQuote stores a new quote
@@ -324,6 +269,94 @@ func StoreQuote(q QuoteT) error {
 // DeleteQuote deletes the quote corresponding to the given ID from the database and the quotes slice
 // It will also modifiy the words map
 func DeleteQuote(ID int) {
+
+}
+
+/* -------------------------------------------------------------------------- */
+/*                         EXPORTED TEACHERS FUNCTIONS                        */
+/* -------------------------------------------------------------------------- */
+
+// GetTeachers returns a slice containing all teachers
+// The returned slice is not sorted
+func GetTeachers() *[]TeacherT {
+	localDatabase.mux.LockRead()
+	defer localDatabase.mux.UnlockRead()
+	teacherSlice := localDatabase.teacherSlice
+
+	return &teacherSlice
+}
+
+// StoreTeacher stores a new teacher
+// If the ID is not zero, StoreTeacher will try to find the corresponding teacher and overwrite it
+// If the ID is nil a new teacher will be created
+func StoreTeacher(t TeacherT) error {
+	var err error
+
+	// Verify connection to PostgreSQL database
+	err = postgresDatabase.Ping()
+	if err != nil {
+		postgresDatabase.Close()
+		return errors.New("At StoreTeacher: " + err.Error())
+	}
+
+	if t.TeacherID == 0 {
+		// add teacher to postgresDatabase
+		err = postgresDatabase.QueryRow(
+			`INSERT INTO teachers (Name, Title, Note) VALUES ($1, $2, $3) RETURNING TeacherID`,
+			t.Name, t.Title, t.Note).Scan(&t.TeacherID)
+		if err != nil {
+			return errors.New("At StoreTeacher: " + err.Error())
+		}
+
+		// add teacher to localDatabase
+		addTeacherToLocalDatabase(t)
+	} else {
+		// try to find corresponding entry postgresDatabase and overwrite it
+		var res sql.Result
+		res, err = postgresDatabase.Exec(
+			`UPDATE teachers SET Name=$2, Title=$3, Note=$4 WHERE TeacherID=$1`,
+			t.TeacherID, t.Name, t.Title, t.Note)
+		if err != nil {
+			return errors.New("At StoreTeacher: " + err.Error())
+		}
+		if rowsAffected, _ := res.RowsAffected(); rowsAffected != 0 {
+			return errors.New("At StoreTeacher: Could not find specified entry for overwrite")
+		}
+
+		// try to find corresponding entry in localDatabase and overwrite it
+		err = overwriteTeacherInLocalDatabase(t)
+		if err != nil {
+			return errors.New("At StoreTeacher: " + err.Error())
+		}
+	}
+
+	log.Print(localDatabase.teacherSlice)
+
+	return nil
+}
+
+// DeleteTeacher deletes the teacher corresponding to the given ID from the database and the teachers slice
+// It will delete all corresponding quotes
+func DeleteTeacher() {
+
+}
+
+/* -------------------------------------------------------------------------- */
+/*                    EXPORTED UNVERIFIED QUOTES FUNCTIONS                    */
+/* -------------------------------------------------------------------------- */
+
+// GetUnverifiedQuotes returns a slice containing all quotes
+func GetUnverifiedQuotes() {
+
+}
+
+// StoreUnverifiedQuote stores an unverified quote
+func StoreUnverifiedQuote() {
+
+}
+
+// DeleteUnverifiedQuote deletes an unverified quote
+func DeleteUnverifiedQuote() {
 
 }
 
