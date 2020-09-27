@@ -61,7 +61,12 @@ func main() {
 	defer database.CloseDatabase()
 
 	log.Print("Starting website on :8080")
+
 	http.HandleFunc("/", handlerMain)
+
+	handlerFiles := http.FileServer(http.Dir("./public"))
+	http.Handle("/static/", http.StripPrefix("/static/", handlerFiles))
+
 	http.HandleFunc("/api/submitquote", handlerAPISubmitQuote)
 	http.HandleFunc("/submit", pageSubmit)
 	log.Fatal(http.ListenAndServe(":8080", nil))
