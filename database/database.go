@@ -448,34 +448,15 @@ func loadLocalDatabase() error {
 // Just adds quote to localDatabase (quoteSlice and wordsMap) without checking q.QuoteID
 // using addQuoteToLocalDatabase without checking if q.QuoteID already exists may be fatal
 func addQuoteToLocalDatabase(q QuoteT) error {
-
 	localDatabase.mux.LockWrite()
 	defer localDatabase.mux.UnlockWrite()
 
-	localDatabase.quoteSlice = append(localDatabase.quoteSlice, q)
-	var enumid int32 = int32(len(localDatabase.quoteSlice) - 1)
-
-	if enumid < 0 {
-		return errors.New("addQuoteToLocalDatabase: could not add quote to quoteSlice of localDatabase")
-	}
-
-	// Iterrate over all words of quote
-	for word, count := range getWordsFromString(q.Text) {
-		wordsMapItem := localDatabase.wordsMap[word]
-		wordsMapItem.totalOccurences += count
-
-		wordsMapItem.occurenceSlice = append(wordsMapItem.occurenceSlice, occurenceSliceT{enumid, count})
-
-		localDatabase.wordsMap[word] = wordsMapItem
-	}
-
-	return nil
+	return unsafeAddQuoteToLocalDatabase(q)
 }
 
 func unsafeAddQuoteToLocalDatabase(q QuoteT) error {
-
 	localDatabase.quoteSlice = append(localDatabase.quoteSlice, q)
-	var enumid int32 = int32(len(localDatabase.quoteSlice) - 1)
+	enumid := int32(len(localDatabase.quoteSlice) - 1)
 
 	if enumid < 0 {
 		return errors.New("addQuoteToLocalDatabase: could not add quote to quoteSlice of localDatabase")
