@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"time"
 	"net/http"
 	"strconv"
 	"quote_gallery/database"
@@ -30,7 +31,8 @@ func handlerQuotes(w http.ResponseWriter, r *http.Request) {
 		database.StoreQuote(database.QuoteT{
 			Text: r.FormValue("text"),
 			Context: r.FormValue("context"),
-			TeacherID: uint32(teacherid)})
+			TeacherID: uint32(teacherid),
+			Unixtime: uint64(time.Now().Unix())})
 	}
 	quotes := database.GetQuotes()
 	tmpl := template.Must(template.ParseFiles("quotes.html"))
