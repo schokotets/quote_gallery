@@ -6,15 +6,18 @@
 </head>
 <body>
 	<form action="/quotes" method="post">
-		<label for="quotefield">Zitat:</label>
-		<input id="quotefield" name="text" type="text">
-		<br>
 		<label for="teacherfield">Lehrer:</label>
-		<select id="teacherfield" name="teacherid">
+		<select id="teacherfield" name="teacherid" required>
 			{{range .}}
-			<option value="{{.ID}}">{{.Name}}, {{.Title}}{{if .Note}} ({{.Note}}){{end}}</option>
+			<option value="{{.TeacherID}}">{{.Name}}, {{.Title}}{{if .Note}} ({{.Note}}){{end}}</option>
 			{{end}}
 		</select>
+		<br>
+		<label for="quotefield">Zitat:</label>
+		<input id="quotefield" name="text" type="text" required>
+		<br>
+		<label for="contextfield">Kontext:</label>
+		<input id="contextfield" name="context" type="text">
 		<br>
 		<input type="submit">
 	</form>

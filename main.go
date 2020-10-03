@@ -27,31 +27,26 @@ func handlerQuotes(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "Form field teacherid is not an integer")
 			return
 		}
-		database.StoreQuote(r.FormValue("text"), teacherid)
+		database.StoreQuote(database.QuoteT{
+			Text: r.FormValue("text"),
+			Context: r.FormValue("context"),
+			TeacherID: uint32(teacherid)})
 	}
-	quotes, err := database.GetQuotes()
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	quotes := database.GetQuotes()
 	tmpl := template.Must(template.ParseFiles("quotes.html"))
 	tmpl.Execute(w, quotes)
 }
 
 func pageSubmit(w http.ResponseWriter, r *http.Request) {
-	teachers, err := database.GetTeachers()
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	teachers := database.GetTeachers()
 	tmpl := template.Must(template.ParseFiles("submit.html"))
 	tmpl.Execute(w, teachers)
 }
 
 func main() {
 	log.Print("Connecting to database on :5432")
-	database.SetupDatabase()
-	defer database.CloseDatabase()
+	database.Setup()
+	defer database.Close()
 
 	log.Print("Starting website on :8080")
 	http.HandleFunc("/", handlerMain)
