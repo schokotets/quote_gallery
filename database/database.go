@@ -115,14 +115,14 @@ func Setup() error {
 		dbname=quote_gallery 
 		sslmode=disable`)
 	if err != nil {
-		return errors.New("At Setup: " + err.Error())
+		return errors.New("Setup: connecting to database failed: " + err.Error())
 	}
 
 	// Verify connection to PostgreSQL database
 	err = postgresDatabase.Ping()
 	if err != nil {
 		postgresDatabase.Close()
-		return errors.New("At Setup: " + err.Error())
+		return errors.New("Setup: pinging database failed: " + err.Error())
 	}
 
 	// Create teachers table in PostgreSQL database if it doesn't exist
@@ -135,7 +135,7 @@ func Setup() error {
 		Note varchar)`)
 	if err != nil {
 		postgresDatabase.Close()
-		return errors.New("At Setup: " + err.Error())
+		return errors.New("Setup: creating teachers table failed: " + err.Error())
 	}
 
 	// Create quotes table in PostgreSQL database if it doesn't exist
@@ -150,7 +150,7 @@ func Setup() error {
 		Upvotes integer)`)
 	if err != nil {
 		postgresDatabase.Close()
-		return errors.New("At Setup: " + err.Error())
+		return errors.New("Setup: creating quotes table failed: " + err.Error())
 	}
 
 	// Create unverifiedQuotes table in PostgreSQL database if it doesn't exist
@@ -165,7 +165,7 @@ func Setup() error {
 		IPHash bigint)`)
 	if err != nil {
 		postgresDatabase.Close()
-		return errors.New("At Setup: " + err.Error())
+		return errors.New("Setup: Creating unverifiedQuotes table failed: " + err.Error())
 	}
 
 	localDatabase.mux.Setup()
@@ -229,7 +229,7 @@ func StoreQuote(q QuoteT) error {
 	err = postgresDatabase.Ping()
 	if err != nil {
 		postgresDatabase.Close()
-		return errors.New("At StoreQuote: " + err.Error())
+		return errors.New("StoreQuote: pinging database failed: " + err.Error())
 	}
 
 	if q.QuoteID == 0 {
@@ -238,7 +238,7 @@ func StoreQuote(q QuoteT) error {
 			`INSERT INTO quotes (TeacherID, Context, Text, Unixtime, Upvotes) VALUES ($1, $2, $3, $4, $5) RETURNING QuoteID`,
 			q.TeacherID, q.Context, q.Text, q.Unixtime, q.Upvotes).Scan(&q.QuoteID)
 		if err != nil {
-			return errors.New("At StoreQuote: " + err.Error())
+			return errors.New("StoreQuote: inserting quote into database failed: " + err.Error())
 		}
 
 		// add quote to localDatabase
@@ -250,16 +250,16 @@ func StoreQuote(q QuoteT) error {
 			`UPDATE quotes SET TeacherID=$2, Context=$3, Text=$4, Unixtime=$5, Upvotes=$6 WHERE QuoteID=$1`,
 			q.QuoteID, q.TeacherID, q.Context, q.Text, q.Unixtime, q.Upvotes)
 		if err != nil {
-			return errors.New("At StoreQuote: " + err.Error())
+			return errors.New("StoreQuote: updating quote in database failed: " + err.Error())
 		}
 		if rowsAffected, _ := res.RowsAffected(); rowsAffected == 0 {
-			return errors.New("At StoreQuote: Could not find specified entry for overwrite")
+			return errors.New("StoreQuote: could not find specified database row for updating")
 		}
 
 		// try to find corresponding entry in localDatabase and overwrite it
 		err = overwriteQuoteInLocalDatabase(q)
 		if err != nil {
-			return errors.New("At StoreQuote: " + err.Error())
+			return errors.New("StoreQuote: updating quote in local cache failed: " + err.Error())
 		}
 	}
 
@@ -296,7 +296,7 @@ func StoreTeacher(t TeacherT) error {
 	err = postgresDatabase.Ping()
 	if err != nil {
 		postgresDatabase.Close()
-		return errors.New("At StoreTeacher: " + err.Error())
+		return errors.New("StoreTeacher: pinging database failed: " + err.Error())
 	}
 
 	if t.TeacherID == 0 {
@@ -305,7 +305,7 @@ func StoreTeacher(t TeacherT) error {
 			`INSERT INTO teachers (Name, Title, Note) VALUES ($1, $2, $3) RETURNING TeacherID`,
 			t.Name, t.Title, t.Note).Scan(&t.TeacherID)
 		if err != nil {
-			return errors.New("At StoreTeacher: " + err.Error())
+			return errors.New("StoreTeacher: inserting teacher into database failed: " + err.Error())
 		}
 
 		// add teacher to localDatabase
@@ -317,16 +317,16 @@ func StoreTeacher(t TeacherT) error {
 			`UPDATE teachers SET Name=$2, Title=$3, Note=$4 WHERE TeacherID=$1`,
 			t.TeacherID, t.Name, t.Title, t.Note)
 		if err != nil {
-			return errors.New("At StoreTeacher: " + err.Error())
+			return errors.New("StoreTeacher: updating teacher in database failed: " + err.Error())
 		}
 		if rowsAffected, _ := res.RowsAffected(); rowsAffected != 0 {
-			return errors.New("At StoreTeacher: Could not find specified entry for overwrite")
+			return errors.New("StoreTeacher: could not find specified database row for updating")
 		}
 
 		// try to find corresponding entry in localDatabase and overwrite it
 		err = overwriteTeacherInLocalDatabase(t)
 		if err != nil {
-			return errors.New("At StoreTeacher: " + err.Error())
+			return errors.New("StoreTeacher: updating quote in local cache failed: " + err.Error())
 		}
 	}
 
@@ -367,7 +367,7 @@ func DeleteUnverifiedQuote() {
 func loadLocalDatabase() error {
 	var err error
 
-	log.Print("Creating localDatabase from PostgreSQL database...")
+	log.Print("Loading localDatabase from PostgreSQL database...")
 
 	// initialize characterLookup table
 	setupCharacterLookup()
@@ -375,7 +375,7 @@ func loadLocalDatabase() error {
 	// Verify connection to PostgreSQL database
 	err = postgresDatabase.Ping()
 	if err != nil {
-		return errors.New("At createLocalDatabase: " + err.Error())
+		return errors.New("loadLocalDatabase: pinging database failed" + err.Error())
 	}
 
 	localDatabase.mux.LockWrite()
@@ -393,7 +393,7 @@ func loadLocalDatabase() error {
 		Upvotes FROM quotes`)
 
 	if err != nil {
-		return errors.New("At createLocalDatabase: " + err.Error())
+		return errors.New("createLocalDatabase: loading quotes from databse failed: " + err.Error())
 	}
 
 	// initialize wordsMap of localDatabase
@@ -409,7 +409,7 @@ func loadLocalDatabase() error {
 		// unsafe, because localDatabase is already locked for writing
 		err = unsafeAddQuoteToLocalDatabase(q)
 		if err != nil {
-			return errors.New("At createLocalDatabase: " + err.Error())
+			return errors.New("createLocalDatabase: adding quote to local database failed: " + err.Error())
 		}
 	}
 
@@ -425,12 +425,12 @@ func loadLocalDatabase() error {
 		Note FROM teachers`)
 
 	if err != nil {
-		return errors.New("At createLocalDatabase: " + err.Error())
+		return errors.New("createLocalDatabase: loading teachers from databse failed: " + err.Error())
 	}
 
 	// Iterate over all teachers from PostgreSQL database
 	for rows.Next() {
-		// Get id and text of quote
+		// Get teacher data (id, name, title, note)
 		var t TeacherT
 		rows.Scan(&t.TeacherID, &t.Name, &t.Title, &t.Note)
 
@@ -441,7 +441,7 @@ func loadLocalDatabase() error {
 
 	rows.Close()
 
-	log.Print("Done")
+	log.Print("Loading localDatabase finished successfully")
 	return nil
 }
 
@@ -456,7 +456,7 @@ func addQuoteToLocalDatabase(q QuoteT) error {
 	var enumid int32 = int32(len(localDatabase.quoteSlice) - 1)
 
 	if enumid < 0 {
-		return errors.New("At addQuoteToLocalDatabase: Could not add quote to quoteSlice of localDatabase")
+		return errors.New("addQuoteToLocalDatabase: could not add quote to quoteSlice of localDatabase")
 	}
 
 	// Iterrate over all words of quote
@@ -478,7 +478,7 @@ func unsafeAddQuoteToLocalDatabase(q QuoteT) error {
 	var enumid int32 = int32(len(localDatabase.quoteSlice) - 1)
 
 	if enumid < 0 {
-		return errors.New("At addQuoteToLocalDatabase: Could not add quote to quoteSlice of localDatabase")
+		return errors.New("addQuoteToLocalDatabase: could not add quote to quoteSlice of localDatabase")
 	}
 
 	// Iterrate over all words of quote
@@ -518,7 +518,7 @@ func overwriteTeacherInLocalDatabase(t TeacherT) error {
 	}
 
 	if affected == false {
-		return errors.New("At overwriteTeacherInLocalDatabase: Could not find specified entry for overwrite")
+		return errors.New("overwriteTeacherInLocalDatabase: could not find specified entry for overwrite")
 	}
 	return nil
 }
@@ -536,7 +536,7 @@ func overwriteQuoteInLocalDatabase(q QuoteT) error {
 	}
 
 	if enumid < 0 {
-		return errors.New("At overwriteTeacherInLocalDatabase: Could not find specified entry for overwrite")
+		return errors.New("overwriteTeacherInLocalDatabase: could not find specified entry for overwrite")
 	}
 
 	wordsFromString := getWordsFromString(q.Text)
