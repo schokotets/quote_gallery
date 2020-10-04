@@ -165,7 +165,7 @@ func Setup() error {
 		IPHash bigint)`)
 	if err != nil {
 		postgresDatabase.Close()
-		return errors.New("Setup: Creating unverifiedQuotes table failed: " + err.Error())
+		return errors.New("Setup: creating unverifiedQuotes table failed: " + err.Error())
 	}
 
 	localDatabase.mux.Setup()
@@ -367,7 +367,7 @@ func DeleteUnverifiedQuote() {
 func loadLocalDatabase() error {
 	var err error
 
-	log.Print("Loading localDatabase from PostgreSQL database...")
+	log.Print("Filling cache from PostgreSQL database...")
 
 	// initialize characterLookup table
 	setupCharacterLookup()
@@ -441,7 +441,7 @@ func loadLocalDatabase() error {
 
 	rows.Close()
 
-	log.Print("Loading localDatabase finished successfully")
+	log.Print("Filled cache successfully")
 	return nil
 }
 
