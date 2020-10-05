@@ -6,6 +6,27 @@ import (
 )
 
 /* -------------------------------------------------------------------------- */
+/*                          GLOBAL PACKAGE VARIABLES                          */
+/* -------------------------------------------------------------------------- */
+
+// Created from PostgreSQL database at (re)start
+// cache is a cache of the postgreSQL database to speed up read operations
+//
+// unverified quotes will not be cached in the local database, because read operations
+// will only be performed by the operator and thus be very rare
+//
+// important: the index of a quote in quoteSlice is called its enumID
+// which is used to quickly identify a quote with the wordsMap
+var cache = struct {
+	quoteSlice   []QuoteT
+	teacherSlice []TeacherT
+	wordsMap     map[string]wordsMapT
+	mux          Mutex
+}{
+	mux: Mutex{0, 0, false},
+}
+
+/* -------------------------------------------------------------------------- */
 /*                         UNEXPORTED CACHE FUNCTIONS                         */
 /* -------------------------------------------------------------------------- */
 

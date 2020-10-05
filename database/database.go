@@ -80,23 +80,6 @@ type occurenceSliceT struct {
 // Handle to the PostgreSQL database, used as long time storage
 var postgresDatabase *sql.DB
 
-// Created from PostgreSQL database at (re)start
-// cache is a cache of the postgreSQL database to speed up read operations
-//
-// unverified quotes will not be cached in the local database, because read operations
-// will only be performed by the operator and thus be very rare
-//
-// important: the index of a quote in quoteSlice is called its enumID
-// which is used to quickly identify a quote with the wordsMap
-var cache = struct {
-	quoteSlice   []QuoteT
-	teacherSlice []TeacherT
-	wordsMap     map[string]wordsMapT
-	mux          Mutex
-}{
-	mux: Mutex{0, 0, false},
-}
-
 // globalMutex is to be used if a function of the database package must assure that every other
 // function is blocked
 var globalMutex Mutex = Mutex{0, 0, false}
