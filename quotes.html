@@ -9,7 +9,7 @@
 	<a href="/submit">Zitat einsenden</a>
 	<ol>
 		{{range .}}
-		<li>„{{.Text}}“ ({{.Teacher}}) (ID: {{.ID}})</li>
+		<li>{{if .Context}}{{.Context}}<br>{{end}}„{{.Text}}“ (TeacherID: {{.TeacherID}}) (QuoteID: {{.QuoteID}})</li>
 		{{end}}
 	</ol>
 </body>

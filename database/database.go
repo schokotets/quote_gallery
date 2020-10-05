@@ -14,11 +14,12 @@ import (
 /* -------------------------------------------------------------------------- */
 
 // QuoteT stores one quote
-// QuoteID   the unique identificator of the quote
-// TeacherID the unique identifier of the corresponding teacher
-// Context	  the context of the quote
-// text       the text of the quote itself
-// unixtime   optional
+// QuoteID    the unique identificator of the quote
+// TeacherID  the unique identifier of the corresponding teacher
+// Context    the context of the quote
+// Text       the text of the quote itself
+// Unixtime   optional
+// Upvotes    optional
 //
 // match  	  only locally, not safed in PostgreSQL database!
 //			  used by GetQuotesFromString to quantify how well this quote fits the string
@@ -33,27 +34,28 @@ type QuoteT struct {
 }
 
 // UnverifiedQuoteT stores one unverified quote
-// QuoteID    the unique identificator of the unverified quote
-// teacher 	   the name of the teacher
-// Context	   the context of the quote
-// text        the text of the quote itself
-// unixtime    optional
-// iphash	   optional
-//
+// QuoteID      the unique identificator of the unverified quote
+// TeacherID    the unique identifier of the corresponding teacher
+// TeacherName  the name of the teacher if no TeacherID is given (e.g. new teacher)
+// Context      the context of the quote
+// Text         the text of the quote itself
+// Unixtime     optional
+// IPHash       optional
 type UnverifiedQuoteT struct {
-	QuoteID  uint32
-	Teacher  string
-	Context  string
-	Text     string
-	Unixtime uint64
-	IPHash   uint64
+	QuoteID     uint32
+	TeacherID   uint32
+	TeacherName string
+	Context     string
+	Text        string
+	Unixtime    uint64
+	IPHash      uint64
 }
 
 // TeacherT stores one teacher
-// TeacherID the unique identifier of the teacher
-// name       the teacher's name
-// title      the teacher's title
-// note       optional notes, e.g. subjects
+// TeacherID  the unique identifier of the teacher
+// Name       the teacher's name
+// Title      the teacher's title
+// Note       optional notes, e.g. subjects
 type TeacherT struct {
 	TeacherID uint32
 	Name      string
@@ -67,7 +69,7 @@ type wordsMapT struct {
 }
 
 type occurenceSliceT struct {
-	enumid int32
+	enumID int32
 	count  uint32
 }
 
@@ -79,21 +81,25 @@ type occurenceSliceT struct {
 var postgresDatabase *sql.DB
 
 // Created from PostgreSQL database at (re)start
-// localDatabase is a cache of the postgreSQL database to speed up read operations
+// cache is a cache of the postgreSQL database to speed up read operations
 //
 // unverified quotes will not be cached in the local database, because read operations
 // will only be performed by the operator and thus be very rare
 //
-// important: the unverifiedQuote table will not be mirrored
-//
-// important: the index of a quote in quoteSlice is called its enumid
+// important: the index of a quote in quoteSlice is called its enumID
 // which is used to quickly identify a quote with the wordsMap
-var localDatabase struct {
+var cache = struct {
 	quoteSlice   []QuoteT
 	teacherSlice []TeacherT
 	wordsMap     map[string]wordsMapT
 	mux          Mutex
+}{
+	mux: Mutex{0, 0, false},
 }
+
+// globalMutex is to be used if a function of the database package must assure that every other
+// function is blocked
+var globalMutex Mutex = Mutex{0, 0, false}
 
 /* -------------------------------------------------------------------------- */
 /*                         EXPORTED GENERAL FUNCTIONS                         */
@@ -101,13 +107,21 @@ var localDatabase struct {
 
 // Setup initializes the database backend
 // Initialize postgres database
-// Create localDatabase from postgresDatabase
+// Create cache from postgresDatabase
 //
-// Must be called only once at startup before any of the other database functions
+// Must be called once at startup before any of the other database functions
+// Can be called during operation to reload the cache
 func Setup() error {
+	globalMutex.MajorLock()
+	defer globalMutex.MajorUnlock()
+
 	var err error
 
-	// Open PostgreSQL database
+	if postgresDatabase != nil {
+		postgresDatabase.Close()
+		postgresDatabase = nil
+	}
+
 	postgresDatabase, err = sql.Open(
 		"postgres",
 		`user=postgres 
@@ -115,14 +129,14 @@ func Setup() error {
 		dbname=quote_gallery 
 		sslmode=disable`)
 	if err != nil {
-		return errors.New("At Setup: " + err.Error())
+		return errors.New("Setup: connecting to database failed: " + err.Error())
 	}
 
 	// Verify connection to PostgreSQL database
 	err = postgresDatabase.Ping()
 	if err != nil {
 		postgresDatabase.Close()
-		return errors.New("At Setup: " + err.Error())
+		return errors.New("Setup: pinging database failed: " + err.Error())
 	}
 
 	// Create teachers table in PostgreSQL database if it doesn't exist
@@ -135,7 +149,7 @@ func Setup() error {
 		Note varchar)`)
 	if err != nil {
 		postgresDatabase.Close()
-		return errors.New("At Setup: " + err.Error())
+		return errors.New("Setup: creating teachers table failed: " + err.Error())
 	}
 
 	// Create quotes table in PostgreSQL database if it doesn't exist
@@ -150,7 +164,7 @@ func Setup() error {
 		Upvotes integer)`)
 	if err != nil {
 		postgresDatabase.Close()
-		return errors.New("At Setup: " + err.Error())
+		return errors.New("Setup: creating quotes table failed: " + err.Error())
 	}
 
 	// Create unverifiedQuotes table in PostgreSQL database if it doesn't exist
@@ -158,31 +172,39 @@ func Setup() error {
 	_, err = postgresDatabase.Exec(
 		`CREATE TABLE IF NOT EXISTS unverifiedQuotes (
 		QuoteID serial PRIMARY KEY,
-		Teacher varchar, 
+		TeacherID integer REFERENCES teachers (TeacherID), 
+		TeacherName varchar, 
 		Context varchar,
 		Text varchar,
 		Unictime bigint,
 		IPHash bigint)`)
 	if err != nil {
 		postgresDatabase.Close()
-		return errors.New("At Setup: " + err.Error())
+		return errors.New("Setup: creating unverifiedQuotes table failed: " + err.Error())
 	}
 
-	localDatabase.mux.Setup()
-	loadLocalDatabase()
+	unsafeLoadCache()
 
 	return nil
 
 }
 
-// Close database backend
-func Close() {
-	localDatabase.mux.LockWrite()
-	localDatabase.quoteSlice = nil
-	localDatabase.teacherSlice = nil
-	localDatabase.wordsMap = nil
-	localDatabase.mux.UnlockWrite()
+// CloseAndClearCache closes postgreSQL database and cache
+func CloseAndClearCache() {
+	globalMutex.MajorLock()
+	defer globalMutex.MajorUnlock()
+
 	postgresDatabase.Close()
+	unsafeClearCache()
+}
+
+// ExecuteQuery runs a query on the database and returns the error
+func ExecuteQuery(query string) error {
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
+
+	_, err := postgresDatabase.Exec(query)
+	return err
 }
 
 /* -------------------------------------------------------------------------- */
@@ -192,75 +214,93 @@ func Close() {
 // GetQuotes returns a slice containing all quotes
 // The weight variable will be zero
 func GetQuotes() *[]QuoteT {
-	localDatabase.mux.LockRead()
-	defer localDatabase.mux.UnlockRead()
-	quoteSlice := localDatabase.quoteSlice
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
 
-	return &quoteSlice
+	// get quotes from cache
+	return getQuotesFromCache()
 }
 
 // GetQuotesByString returns a slice containing all quotes
 // The weight variable will indicate how well the given text matches the corresponding quote
 func GetQuotesByString(text string) *[]QuoteT {
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
 
-	localDatabase.mux.LockRead()
-	defer localDatabase.mux.UnlockRead()
-
-	quoteSlice := localDatabase.quoteSlice
-
-	for word, count := range getWordsFromString(text) {
-		wordsMapItem := localDatabase.wordsMap[word]
-
-		_ = count
-		for _, v := range wordsMapItem.occurenceSlice {
-			quoteSlice[v.enumid].Match += float32(v.count) / float32(wordsMapItem.totalOccurences)
-		}
-	}
-	return &quoteSlice
+	// get weighted quotes from cache
+	return getQuotesByStringFromCache(text)
 }
 
-// StoreQuote stores a new quote
-// If the ID is not zero, StoreQuote will try to find the appropriate quote and overwrite it
-// If the ID is zero a new quote will be created
-func StoreQuote(q QuoteT) error {
+// CreateQuote creates a new quote
+func CreateQuote(q QuoteT) error {
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
+
 	var err error
 
 	// Verify connection to PostgreSQL database
 	err = postgresDatabase.Ping()
 	if err != nil {
 		postgresDatabase.Close()
-		return errors.New("At StoreQuote: " + err.Error())
+		return errors.New("CreateQuote: pinging database failed: " + err.Error())
 	}
 
+	// add quote to postgresDatabase
+	err = postgresDatabase.QueryRow(
+		`INSERT INTO quotes (TeacherID, Context, Text, Unixtime, Upvotes) VALUES ($1, $2, $3, $4, $5) RETURNING QuoteID`,
+		q.TeacherID, q.Context, q.Text, q.Unixtime, q.Upvotes).Scan(&q.QuoteID)
+	if err != nil {
+		return errors.New("CreateQuote: inserting quote into database failed: " + err.Error())
+	}
+
+	// add quote to cache
+	addQuoteToCache(q)
+
+	return nil
+}
+
+// UpdateQuote updates an existing quote by given QuoteID
+func UpdateQuote(q QuoteT) error {
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
+
+	var err error
+
 	if q.QuoteID == 0 {
-		// add quote to postgresDatabase
-		err = postgresDatabase.QueryRow(
-			`INSERT INTO quotes (TeacherID, Context, Text, Unixtime, Upvotes) VALUES ($1, $2, $3, $4, $5) RETURNING QuoteID`,
-			q.TeacherID, q.Context, q.Text, q.Unixtime, q.Upvotes).Scan(&q.QuoteID)
-		if err != nil {
-			return errors.New("At StoreQuote: " + err.Error())
-		}
+		return errors.New("UpdateQuote: QuoteID is zero")
+	}
 
-		// add quote to localDatabase
-		addQuoteToLocalDatabase(q)
-	} else {
-		// try to find corresponding entry postgresDatabase and overwrite it
-		var res sql.Result
-		res, err = postgresDatabase.Exec(
-			`UPDATE quotes SET TeacherID=$2, Context=$3, Text=$4, Unixtime=$5, Upvotes=$6 WHERE QuoteID=$1`,
-			q.QuoteID, q.TeacherID, q.Context, q.Text, q.Unixtime, q.Upvotes)
-		if err != nil {
-			return errors.New("At StoreQuote: " + err.Error())
-		}
-		if rowsAffected, _ := res.RowsAffected(); rowsAffected == 0 {
-			return errors.New("At StoreQuote: Could not find specified entry for overwrite")
-		}
+	// Verify connection to PostgreSQL database
+	err = postgresDatabase.Ping()
+	if err != nil {
+		postgresDatabase.Close()
+		return errors.New("UpdateQuote: pinging database failed: " + err.Error())
+	}
 
-		// try to find corresponding entry in localDatabase and overwrite it
-		err = overwriteQuoteInLocalDatabase(q)
-		if err != nil {
-			return errors.New("At StoreQuote: " + err.Error())
-		}
+	// try to find corresponding entry postgresDatabase and overwrite it
+	var res sql.Result
+	res, err = postgresDatabase.Exec(
+		`UPDATE quotes SET TeacherID=$2, Context=$3, Text=$4, Unixtime=$5, Upvotes=$6 WHERE QuoteID=$1`,
+		q.QuoteID, q.TeacherID, q.Context, q.Text, q.Unixtime, q.Upvotes)
+	if err != nil {
+		return errors.New("UpdateQuote: updating quote in database failed: " + err.Error())
+	}
+	if rowsAffected, _ := res.RowsAffected(); rowsAffected == 0 {
+		return errors.New("UpdateQuote: could not find specified database row for updating")
+	}
+
+	// try to find corresponding entry in cache and overwrite it
+	err = overwriteQuoteInCache(q)
+	if err != nil {
+		// is this code is executed
+		// database was updated successfully but quote cannot be found in cache
+		// thus cache and database are out of sync
+		// because of the database being the only source of truth, UpdateQuote() should not fail
+		// but the cache will be reloaded
+
+		log.Panic("UpdateQuote: overwriteQuoteInCache returned: " + err.Error())
+		log.Panic("Cache is out of sync with database, trying to reload")
+		go Setup()
 	}
 
 	return nil
@@ -269,7 +309,8 @@ func StoreQuote(q QuoteT) error {
 // DeleteQuote deletes the quote corresponding to the given ID from the database and the quotes slice
 // It will also modifiy the words map
 func DeleteQuote(ID int) {
-
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
 }
 
 /* -------------------------------------------------------------------------- */
@@ -279,58 +320,84 @@ func DeleteQuote(ID int) {
 // GetTeachers returns a slice containing all teachers
 // The returned slice is not sorted
 func GetTeachers() *[]TeacherT {
-	localDatabase.mux.LockRead()
-	defer localDatabase.mux.UnlockRead()
-	teacherSlice := localDatabase.teacherSlice
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
 
-	return &teacherSlice
+	// get teachers from cache
+	return getTeachersFromCache()
 }
 
-// StoreTeacher stores a new teacher
-// If the ID is not zero, StoreTeacher will try to find the corresponding teacher and overwrite it
-// If the ID is nil a new teacher will be created
-func StoreTeacher(t TeacherT) error {
+// CreateTeacher creates a new teacher
+func CreateTeacher(t TeacherT) error {
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
+
 	var err error
 
 	// Verify connection to PostgreSQL database
 	err = postgresDatabase.Ping()
 	if err != nil {
 		postgresDatabase.Close()
-		return errors.New("At StoreTeacher: " + err.Error())
+		return errors.New("CreateTeacher: pinging database failed: " + err.Error())
 	}
+
+	// add teacher to postgresDatabase
+	err = postgresDatabase.QueryRow(
+		`INSERT INTO teachers (Name, Title, Note) VALUES ($1, $2, $3) RETURNING TeacherID`,
+		t.Name, t.Title, t.Note).Scan(&t.TeacherID)
+	if err != nil {
+		return errors.New("CreateTeacher: inserting teacher into database failed: " + err.Error())
+	}
+
+	// add teacher to cache
+	addTeacherToCache(t)
+
+	return nil
+}
+
+// UpdateTeacher updates a teacher by given TeacherID
+func UpdateTeacher(t TeacherT) error {
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
+
+	var err error
 
 	if t.TeacherID == 0 {
-		// add teacher to postgresDatabase
-		err = postgresDatabase.QueryRow(
-			`INSERT INTO teachers (Name, Title, Note) VALUES ($1, $2, $3) RETURNING TeacherID`,
-			t.Name, t.Title, t.Note).Scan(&t.TeacherID)
-		if err != nil {
-			return errors.New("At StoreTeacher: " + err.Error())
-		}
-
-		// add teacher to localDatabase
-		addTeacherToLocalDatabase(t)
-	} else {
-		// try to find corresponding entry postgresDatabase and overwrite it
-		var res sql.Result
-		res, err = postgresDatabase.Exec(
-			`UPDATE teachers SET Name=$2, Title=$3, Note=$4 WHERE TeacherID=$1`,
-			t.TeacherID, t.Name, t.Title, t.Note)
-		if err != nil {
-			return errors.New("At StoreTeacher: " + err.Error())
-		}
-		if rowsAffected, _ := res.RowsAffected(); rowsAffected != 0 {
-			return errors.New("At StoreTeacher: Could not find specified entry for overwrite")
-		}
-
-		// try to find corresponding entry in localDatabase and overwrite it
-		err = overwriteTeacherInLocalDatabase(t)
-		if err != nil {
-			return errors.New("At StoreTeacher: " + err.Error())
-		}
+		return errors.New("UpdateTeacher: TeacherID is zero")
 	}
 
-	log.Print(localDatabase.teacherSlice)
+	// Verify connection to PostgreSQL database
+	err = postgresDatabase.Ping()
+	if err != nil {
+		postgresDatabase.Close()
+		return errors.New("UpdateTeacher: pinging database failed: " + err.Error())
+	}
+
+	// try to find corresponding entry postgresDatabase and overwrite it
+	var res sql.Result
+	res, err = postgresDatabase.Exec(
+		`UPDATE teachers SET Name=$2, Title=$3, Note=$4 WHERE TeacherID=$1`,
+		t.TeacherID, t.Name, t.Title, t.Note)
+	if err != nil {
+		return errors.New("UpdateTeacher: updating teacher in database failed: " + err.Error())
+	}
+	if rowsAffected, _ := res.RowsAffected(); rowsAffected != 0 {
+		return errors.New("UpdateTeacher: could not find specified database row for updating")
+	}
+
+	// try to find corresponding entry in cache and overwrite it
+	err = overwriteTeacherInCache(t)
+	if err != nil {
+		// is this code is executed
+		// database was updated successfully but quote cannot be found in cache
+		// thus cache and database are out of sync
+		// because of the database being the only source of truth, UpdateQuote() should not fail
+		// but the cache will be reloaded
+
+		log.Panic("UpdateQuote: overwriteQuoteInCache returned: " + err.Error())
+		log.Panic("Cache is out of sync with database, trying to reload")
+		go Setup()
+	}
 
 	return nil
 }
@@ -338,7 +405,8 @@ func StoreTeacher(t TeacherT) error {
 // DeleteTeacher deletes the teacher corresponding to the given ID from the database and the teachers slice
 // It will delete all corresponding quotes
 func DeleteTeacher() {
-
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
 }
 
 /* -------------------------------------------------------------------------- */
@@ -347,239 +415,18 @@ func DeleteTeacher() {
 
 // GetUnverifiedQuotes returns a slice containing all quotes
 func GetUnverifiedQuotes() {
-
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
 }
 
 // StoreUnverifiedQuote stores an unverified quote
 func StoreUnverifiedQuote() {
-
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
 }
 
 // DeleteUnverifiedQuote deletes an unverified quote
 func DeleteUnverifiedQuote() {
-
-}
-
-/* -------------------------------------------------------------------------- */
-/*                              PRIVATE FUNCTIONS                             */
-/* -------------------------------------------------------------------------- */
-
-func loadLocalDatabase() error {
-	var err error
-
-	log.Print("Creating localDatabase from PostgreSQL database...")
-
-	// initialize characterLookup table
-	setupCharacterLookup()
-
-	// Verify connection to PostgreSQL database
-	err = postgresDatabase.Ping()
-	if err != nil {
-		return errors.New("At createLocalDatabase: " + err.Error())
-	}
-
-	localDatabase.mux.LockWrite()
-	defer localDatabase.mux.UnlockWrite()
-
-	/* --------------------------------- QUOTES --------------------------------- */
-
-	// get all quotes from PostgreSQL database
-	rows, err := postgresDatabase.Query(`SELECT 
-		QuoteID,
-		TeacherID, 
-		Context,
-		Text,
-		Unixtime,
-		Upvotes FROM quotes`)
-
-	if err != nil {
-		return errors.New("At createLocalDatabase: " + err.Error())
-	}
-
-	// initialize wordsMap of localDatabase
-	localDatabase.wordsMap = make(map[string]wordsMapT)
-
-	// Iterrate over all quotes from PostgreSQL database
-	for rows.Next() {
-		// Get id and text of quote
-		var q QuoteT
-		rows.Scan(&q.QuoteID, &q.TeacherID, &q.Context, &q.Text, &q.Unixtime, &q.Upvotes)
-
-		// add to local database
-		// unsafe, because localDatabase is already locked for writing
-		err = unsafeAddQuoteToLocalDatabase(q)
-		if err != nil {
-			return errors.New("At createLocalDatabase: " + err.Error())
-		}
-	}
-
-	rows.Close()
-
-	/* -------------------------------- TEACHERS -------------------------------- */
-
-	// get all teachers from PostgreSQL database
-	rows, err = postgresDatabase.Query(`SELECT
-		TeacherID, 
-		Name, 
-		Title, 
-		Note FROM teachers`)
-
-	if err != nil {
-		return errors.New("At createLocalDatabase: " + err.Error())
-	}
-
-	// Iterate over all teachers from PostgreSQL database
-	for rows.Next() {
-		// Get id and text of quote
-		var t TeacherT
-		rows.Scan(&t.TeacherID, &t.Name, &t.Title, &t.Note)
-
-		// add to local database
-		// unsafe, because localDatabase is already locked for writing
-		unsafeAddTeacherToLocalDatabase(t)
-	}
-
-	rows.Close()
-
-	log.Print("Done")
-	return nil
-}
-
-// Just adds quote to localDatabase (quoteSlice and wordsMap) without checking q.QuoteID
-// using addQuoteToLocalDatabase without checking if q.QuoteID already exists may be fatal
-func addQuoteToLocalDatabase(q QuoteT) error {
-
-	localDatabase.mux.LockWrite()
-	defer localDatabase.mux.UnlockWrite()
-
-	localDatabase.quoteSlice = append(localDatabase.quoteSlice, q)
-	var enumid int32 = int32(len(localDatabase.quoteSlice) - 1)
-
-	if enumid < 0 {
-		return errors.New("At addQuoteToLocalDatabase: Could not add quote to quoteSlice of localDatabase")
-	}
-
-	// Iterrate over all words of quote
-	for word, count := range getWordsFromString(q.Text) {
-		wordsMapItem := localDatabase.wordsMap[word]
-		wordsMapItem.totalOccurences += count
-
-		wordsMapItem.occurenceSlice = append(wordsMapItem.occurenceSlice, occurenceSliceT{enumid, count})
-
-		localDatabase.wordsMap[word] = wordsMapItem
-	}
-
-	return nil
-}
-
-func unsafeAddQuoteToLocalDatabase(q QuoteT) error {
-
-	localDatabase.quoteSlice = append(localDatabase.quoteSlice, q)
-	var enumid int32 = int32(len(localDatabase.quoteSlice) - 1)
-
-	if enumid < 0 {
-		return errors.New("At addQuoteToLocalDatabase: Could not add quote to quoteSlice of localDatabase")
-	}
-
-	// Iterrate over all words of quote
-	for word, count := range getWordsFromString(q.Text) {
-		wordsMapItem := localDatabase.wordsMap[word]
-		wordsMapItem.totalOccurences += count
-
-		wordsMapItem.occurenceSlice = append(wordsMapItem.occurenceSlice, occurenceSliceT{enumid, count})
-
-		localDatabase.wordsMap[word] = wordsMapItem
-	}
-
-	return nil
-}
-
-func addTeacherToLocalDatabase(t TeacherT) {
-	localDatabase.mux.LockWrite()
-	defer localDatabase.mux.UnlockWrite()
-	localDatabase.teacherSlice = append(localDatabase.teacherSlice, t)
-}
-
-func unsafeAddTeacherToLocalDatabase(t TeacherT) {
-	localDatabase.teacherSlice = append(localDatabase.teacherSlice, t)
-}
-
-func overwriteTeacherInLocalDatabase(t TeacherT) error {
-	localDatabase.mux.LockWrite()
-	defer localDatabase.mux.UnlockWrite()
-
-	affected := false
-	for i, v := range localDatabase.teacherSlice {
-		if v.TeacherID == t.TeacherID {
-			localDatabase.teacherSlice[i] = t
-			affected = true
-			break
-		}
-	}
-
-	if affected == false {
-		return errors.New("At overwriteTeacherInLocalDatabase: Could not find specified entry for overwrite")
-	}
-	return nil
-}
-
-func overwriteQuoteInLocalDatabase(q QuoteT) error {
-	localDatabase.mux.LockWrite()
-	defer localDatabase.mux.UnlockWrite()
-
-	var enumid int32 = -1
-	for i, v := range localDatabase.quoteSlice {
-		if v.QuoteID == q.QuoteID {
-			localDatabase.quoteSlice[i] = q
-			enumid = int32(i)
-		}
-	}
-
-	if enumid < 0 {
-		return errors.New("At overwriteTeacherInLocalDatabase: Could not find specified entry for overwrite")
-	}
-
-	wordsFromString := getWordsFromString(q.Text)
-
-	for word, wordsMapItem := range localDatabase.wordsMap {
-		for i, v := range wordsMapItem.occurenceSlice {
-			if v.enumid == enumid {
-				wordCount := wordsFromString[word]
-				wordsMapItem.totalOccurences -= wordsMapItem.occurenceSlice[i].count
-				if wordCount > 0 {
-					wordsMapItem.occurenceSlice[i].count = wordCount
-					wordsMapItem.totalOccurences += wordCount
-					wordsFromString[word] = 0
-					localDatabase.wordsMap[word] = wordsMapItem
-				} else if wordsMapItem.totalOccurences == 0 {
-					delete(localDatabase.wordsMap, word)
-				} else {
-					iMax := len(wordsMapItem.occurenceSlice) - 1
-					wordsMapItem.occurenceSlice[i] = wordsMapItem.occurenceSlice[iMax]
-					wordsMapItem.occurenceSlice[iMax] = occurenceSliceT{0, 0}
-					wordsMapItem.occurenceSlice = wordsMapItem.occurenceSlice[:iMax]
-					localDatabase.wordsMap[word] = wordsMapItem
-				}
-				break
-			}
-		}
-	}
-
-	for word, count := range wordsFromString {
-		if count > 0 {
-			wordsMapItem := localDatabase.wordsMap[word]
-			wordsMapItem.totalOccurences += count
-
-			wordsMapItem.occurenceSlice = append(wordsMapItem.occurenceSlice, occurenceSliceT{enumid, count})
-
-			localDatabase.wordsMap[word] = wordsMapItem
-		}
-	}
-
-	return nil
-}
-
-// PrintWordsMap is a debugging function
-func PrintWordsMap() {
-	log.Print(localDatabase.wordsMap)
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
 }

@@ -8,22 +8,50 @@ import (
 
 func main() {
 	log.Print("Connecting to database on :5432")
-	database.SetupDatabase()
-	defer database.CloseDatabase()
+	database.Setup()
+	defer database.CloseAndClearCache()
 
-	database.StoreTeacher("Heimburg", "Herr", "")
-	database.StoreTeacher("Krug", "Herr", "")
-	database.StoreTeacher("Spreer", "Frau", "")
+	database.CreateTeacher(database.TeacherT{Name: "Heimburg", Title: "Herr", Note: "Sp Ge"})
+	database.CreateTeacher(database.TeacherT{Name: "Spreer", Title: "Frau", Note: "Sp Eth"})
+	database.CreateTeacher(database.TeacherT{Name: "Eidner", Title: "Frau", Note: "Sp Eth"})
+	database.CreateTeacher(database.TeacherT{Name: "Krug", Title: "Herr", Note: "Ma Ph"})
+	//database.CreateTeacher("Krug", "Herr", "")
+	//database.CreateTeacher("Spreer", "Frau", "")
 
-	i, _ := database.GetTeachers()
+	i := database.GetTeachers()
 	fmt.Println(i)
 
-	database.StoreQuote("Ich mach dich rund, wi'n Buslenker", i[0].ID)
-	database.StoreQuote("Brust steif machen und mit'm Nippl annehmen.", i[0].ID)
-	database.StoreQuote("Mathe ma' dick! Mathe mal dünn!", i[1].ID)
-	database.StoreQuote("Sport ist Mord und Massensport ist Massenmord.", i[1].ID)
-	database.StoreQuote("Lass mein Hütchen, das ist Friedhelm!", i[2].ID)
+	database.CreateQuote(database.QuoteT{
+		TeacherID: (*i)[0].TeacherID,
+		Context:   "Nicer Tag",
+		Text:      "AAA BBB CCC",
+	})
 
-	j, _ := database.GetQuotes()
+	database.CreateQuote(database.QuoteT{
+		TeacherID: (*i)[0].TeacherID,
+		Context:   "Nicer Tag",
+		Text:      "BBB CCC",
+	})
+
+	database.CreateQuote(database.QuoteT{
+		TeacherID: (*i)[0].TeacherID,
+		Context:   "Nicer Tag",
+		Text:      "DDD EEE",
+	})
+
+	j := database.GetQuotes()
+	fmt.Println(j)
+
+	database.UpdateQuote(database.QuoteT{
+		QuoteID:   2,
+		TeacherID: (*i)[0].TeacherID,
+		Context:   "Nicer Tag",
+		Text:      "BBB CCC DDD",
+	})
+
+	j = database.GetQuotes()
+	fmt.Println(j)
+
+	j = database.GetQuotesByString("BBB DDD")
 	fmt.Println(j)
 }
