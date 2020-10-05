@@ -5,13 +5,12 @@ import (
 	"unicode"
 )
 
-// Processes a given string into a words
-// How the string is sliced is mainly dependend on the characterLookup which itself is created by setupCharacterLookup
-// setupCharacterLookup needs to have been called
+// turns a given string to a wordCountMap
 func getWordsFromString(s string) map[string]uint32 {
 	var buffer bytes.Buffer
 	buffer.Reset()
 	wordCountMap := make(map[string]uint32)
+
 	for _, r := range s {
 
 		if unicode.IsLetter(r) {
@@ -19,6 +18,7 @@ func getWordsFromString(s string) map[string]uint32 {
 			continue
 		}
 
+		// character is not a letter -> word ended
 		if buffer.Len() != 0 {
 			wordCountMap[buffer.String()] = wordCountMap[buffer.String()] + 1
 			buffer.Reset()
