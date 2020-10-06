@@ -10,6 +10,23 @@ func main() {
 	database.Setup()
 	defer database.CloseAndClearCache()
 
+	err := database.ExecuteQuery("START TRANSACTION")
+	if err != nil {
+		log.Fatal("Cannot start transaction: ", err)
+	}
+	err = database.ExecuteQuery("DELETE FROM unverifiedQuotes")
+	if err != nil {
+		log.Fatal("Cannot temp-delete quotes: ", err)
+	}
+	err = database.ExecuteQuery("DELETE FROM quotes")
+	if err != nil {
+		log.Fatal("Cannot temp-delete quotes: ", err)
+	}
+	err = database.ExecuteQuery("DELETE FROM teachers")
+	if err != nil {
+		log.Fatal("Cannot temp-delete teachers: ", err)
+	}
+
 	// database.CreateTeacher(database.TeacherT{Name: "Heimburg", Title: "Herr", Note: "Sp Ge"})
 	// database.CreateTeacher(database.TeacherT{Name: "Spreer", Title: "Frau", Note: "Sp Eth"})
 	// database.CreateTeacher(database.TeacherT{Name: "Eidner", Title: "Frau", Note: "Sp Eth"})
@@ -63,4 +80,9 @@ func main() {
 		IPHash:      3487562938475,
 		Unixtime:    23489576485,
 	}))
+
+	//j, _ := database.GetQuotes()
+	//fmt.Println(j)
+
+	database.ExecuteQuery("ROLLBACK")
 }

@@ -88,6 +88,13 @@ var globalMutex Mutex = Mutex{0, 0, false}
 /*                         EXPORTED GENERAL FUNCTIONS                         */
 /* -------------------------------------------------------------------------- */
 
+// ExecuteQuery runs a query on the database and returns the error
+// This function is to be used in a testing environment
+func ExecuteQuery(query string) error {
+	_, err := database.Exec(query)
+	return err
+}
+
 // Setup initializes the database backend
 // Initialize postgres database
 // Create cache from postgresDatabase
