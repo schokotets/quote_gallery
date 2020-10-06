@@ -396,14 +396,20 @@ func DeleteTeacher() {
 /*                    EXPORTED UNVERIFIED QUOTES FUNCTIONS                    */
 /* -------------------------------------------------------------------------- */
 
-// GetUnverifiedQuotes returns a slice containing all quotes
+// GetUnverifiedQuotes returns a slice containing all unverified quotes
 func GetUnverifiedQuotes() {
 	globalMutex.MinorLock()
 	defer globalMutex.MinorUnlock()
 }
 
-// StoreUnverifiedQuote stores an unverified quote
-func StoreUnverifiedQuote() {
+// CreateUnverifiedQuote stores an unverified quote
+func CreateUnverifiedQuote() {
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
+}
+
+// UpdateUnverifiedQuote updates an unverified quote
+func UpdateUnverifiedQuote() {
 	globalMutex.MinorLock()
 	defer globalMutex.MinorUnlock()
 }
