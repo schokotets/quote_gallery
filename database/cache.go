@@ -153,7 +153,7 @@ func unsafeOverwriteTeacherInCache(t TeacherT) error {
 	}
 
 	if affected == false {
-		return errors.New("overwriteTeacherInCache: could not find specified entry for overwrite")
+		return errors.New("unsafeOverwriteTeacherInCache: could not find specified entry for overwrite")
 	}
 	return nil
 }
@@ -169,7 +169,7 @@ func unsafeOverwriteQuoteInCache(q QuoteT) error {
 	}
 
 	if enumID < 0 {
-		return errors.New("overwriteQuoteInCache: could not find specified entry for overwrite")
+		return errors.New("unsafeOverwriteQuoteInCache: could not find specified entry for overwrite")
 	}
 
 	wordsFromString := getWordsFromString(q.Text)

@@ -281,7 +281,7 @@ func UpdateQuote(q QuoteT) error {
 		// because of the database being the only source of truth, UpdateQuote() should not fail
 		// but the cache will be reloaded
 
-		log.Panic("UpdateQuote: overwriteQuoteInCache returned: " + err.Error())
+		log.Panic("UpdateQuote: unsafeOverwriteQuoteInCache returned: " + err.Error())
 		log.Panic("Cache is out of sync with database, trying to reload")
 		go Setup()
 	}
@@ -377,7 +377,7 @@ func UpdateTeacher(t TeacherT) error {
 		// because of the database being the only source of truth, UpdateQuote() should not fail
 		// but the cache will be reloaded
 
-		log.Panic("UpdateQuote: overwriteQuoteInCache returned: " + err.Error())
+		log.Panic("UpdateQuote: unsafeOverwriteTeacherInCache returned: " + err.Error())
 		log.Panic("Cache is out of sync with database, trying to reload")
 		go Setup()
 	}
