@@ -26,7 +26,7 @@ func (m *Mutex) Setup() {
 
 // MinorLock only blocks if MajorLock is active or imminent
 // several MinorLocks can exist in parallel
-// e.g. if a rountine only wants to read
+// e.g. if a routine only wants to read
 func (m *Mutex) MinorLock() {
 	doBlock := true
 	for doBlock {
@@ -34,13 +34,13 @@ func (m *Mutex) MinorLock() {
 			runtime.Gosched()
 		}
 
-		if m.isMajor == false {
+		if !m.isMajor {
 			doBlock = false
 			m.minorThreadsCount++
 		}
 		atomic.StoreUint32(&m.state, unlocked)
 
-		if doBlock == true {
+		if doBlock {
 			runtime.Gosched()
 		}
 	}
@@ -64,6 +64,7 @@ func (m *Mutex) MinorUnlock() {
 // e.g. if a rountine wants to read and to write
 func (m *Mutex) MajorLock() {
 	doBlock := true
+	// are there no other major locks active?
 	noOtherMajors := false
 
 	for doBlock {
@@ -71,7 +72,7 @@ func (m *Mutex) MajorLock() {
 			runtime.Gosched()
 		}
 
-		if m.isMajor == false {
+		if !m.isMajor {
 			m.isMajor = true
 			noOtherMajors = true
 		}
@@ -82,7 +83,7 @@ func (m *Mutex) MajorLock() {
 
 		atomic.StoreUint32(&m.state, unlocked)
 
-		if doBlock == true {
+		if doBlock {
 			runtime.Gosched()
 		}
 	}
