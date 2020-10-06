@@ -201,7 +201,7 @@ func GetQuotes() *[]QuoteT {
 	defer globalMutex.MinorUnlock()
 
 	// get quotes from cache
-	return getQuotesFromCache()
+	return unsafeGetQuotesFromCache()
 }
 
 // GetQuotesByString returns a slice containing all quotes
@@ -211,13 +211,13 @@ func GetQuotesByString(text string) *[]QuoteT {
 	defer globalMutex.MinorUnlock()
 
 	// get weighted quotes from cache
-	return getQuotesByStringFromCache(text)
+	return unsafeGetQuotesByStringFromCache(text)
 }
 
 // CreateQuote creates a new quote
 func CreateQuote(q QuoteT) error {
-	globalMutex.MinorLock()
-	defer globalMutex.MinorUnlock()
+	globalMutex.MajorLock()
+	defer globalMutex.MajorUnlock()
 
 	var err error
 
@@ -237,15 +237,15 @@ func CreateQuote(q QuoteT) error {
 	}
 
 	// add quote to cache
-	addQuoteToCache(q)
+	unsafeAddQuoteToCache(q)
 
 	return nil
 }
 
 // UpdateQuote updates an existing quote by given QuoteID
 func UpdateQuote(q QuoteT) error {
-	globalMutex.MinorLock()
-	defer globalMutex.MinorUnlock()
+	globalMutex.MajorLock()
+	defer globalMutex.MajorUnlock()
 
 	var err error
 
@@ -273,7 +273,7 @@ func UpdateQuote(q QuoteT) error {
 	}
 
 	// try to find corresponding entry in cache and overwrite it
-	err = overwriteQuoteInCache(q)
+	err = unsafeOverwriteQuoteInCache(q)
 	if err != nil {
 		// is this code is executed
 		// database was updated successfully but quote cannot be found in cache
@@ -292,8 +292,8 @@ func UpdateQuote(q QuoteT) error {
 // DeleteQuote deletes the quote corresponding to the given ID from the database and the quotes slice
 // It will also modifiy the words map
 func DeleteQuote(ID int) {
-	globalMutex.MinorLock()
-	defer globalMutex.MinorUnlock()
+	globalMutex.MajorLock()
+	defer globalMutex.MajorUnlock()
 }
 
 /* -------------------------------------------------------------------------- */
@@ -307,13 +307,13 @@ func GetTeachers() *[]TeacherT {
 	defer globalMutex.MinorUnlock()
 
 	// get teachers from cache
-	return getTeachersFromCache()
+	return unsafeGetTeachersFromCache()
 }
 
 // CreateTeacher creates a new teacher
 func CreateTeacher(t TeacherT) error {
-	globalMutex.MinorLock()
-	defer globalMutex.MinorUnlock()
+	globalMutex.MajorLock()
+	defer globalMutex.MajorUnlock()
 
 	var err error
 
@@ -333,15 +333,15 @@ func CreateTeacher(t TeacherT) error {
 	}
 
 	// add teacher to cache
-	addTeacherToCache(t)
+	unsafeAddTeacherToCache(t)
 
 	return nil
 }
 
 // UpdateTeacher updates a teacher by given TeacherID
 func UpdateTeacher(t TeacherT) error {
-	globalMutex.MinorLock()
-	defer globalMutex.MinorUnlock()
+	globalMutex.MajorLock()
+	defer globalMutex.MajorUnlock()
 
 	var err error
 
@@ -369,7 +369,7 @@ func UpdateTeacher(t TeacherT) error {
 	}
 
 	// try to find corresponding entry in cache and overwrite it
-	err = overwriteTeacherInCache(t)
+	err = unsafeOverwriteTeacherInCache(t)
 	if err != nil {
 		// is this code is executed
 		// database was updated successfully but quote cannot be found in cache
@@ -388,8 +388,8 @@ func UpdateTeacher(t TeacherT) error {
 // DeleteTeacher deletes the teacher corresponding to the given ID from the database and the teachers slice
 // It will delete all corresponding quotes
 func DeleteTeacher() {
-	globalMutex.MinorLock()
-	defer globalMutex.MinorUnlock()
+	globalMutex.MajorLock()
+	defer globalMutex.MajorUnlock()
 }
 
 /* -------------------------------------------------------------------------- */

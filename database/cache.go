@@ -17,13 +17,10 @@ import (
 //
 // important: the index of a quote in quoteSlice is called its enumID
 // which is used to quickly identify a quote with the wordsMap
-var cache = struct {
+var cache struct {
 	quoteSlice   []QuoteT
 	teacherSlice []TeacherT
 	wordsMap     map[string]wordsMapT
-	mux          Mutex
-}{
-	mux: Mutex{0, 0, false},
 }
 
 /* -------------------------------------------------------------------------- */
@@ -117,14 +114,6 @@ func unsafeClearCache() {
 
 // Just adds quote to cache (quoteSlice and wordsMap) without checking q.QuoteID
 // using addQuoteToCache without checking if q.QuoteID already exists may be fatal
-func addQuoteToCache(q QuoteT) error {
-
-	cache.mux.MajorLock()
-	defer cache.mux.MajorUnlock()
-
-	return unsafeAddQuoteToCache(q)
-}
-
 func unsafeAddQuoteToCache(q QuoteT) error {
 
 	cache.quoteSlice = append(cache.quoteSlice, q)
@@ -148,20 +137,11 @@ func unsafeAddQuoteToCache(q QuoteT) error {
 }
 
 // unsafe functions aren't concurrency safe
-func addTeacherToCache(t TeacherT) {
-	cache.mux.MajorLock()
-	defer cache.mux.MajorUnlock()
-	unsafeAddTeacherToCache(t)
-}
-
-// unsafe functions aren't concurrency safe
 func unsafeAddTeacherToCache(t TeacherT) {
 	cache.teacherSlice = append(cache.teacherSlice, t)
 }
 
-func overwriteTeacherInCache(t TeacherT) error {
-	cache.mux.MajorLock()
-	defer cache.mux.MajorUnlock()
+func unsafeOverwriteTeacherInCache(t TeacherT) error {
 
 	affected := false
 	for i, v := range cache.teacherSlice {
@@ -178,9 +158,7 @@ func overwriteTeacherInCache(t TeacherT) error {
 	return nil
 }
 
-func overwriteQuoteInCache(q QuoteT) error {
-	cache.mux.MajorLock()
-	defer cache.mux.MajorUnlock()
+func unsafeOverwriteQuoteInCache(q QuoteT) error {
 
 	var enumID int32 = -1
 	for i, v := range cache.quoteSlice {
@@ -234,25 +212,18 @@ func overwriteQuoteInCache(q QuoteT) error {
 	return nil
 }
 
-func getQuotesFromCache() *[]QuoteT {
-	cache.mux.MinorLock()
-	defer cache.mux.MinorUnlock()
+func unsafeGetQuotesFromCache() *[]QuoteT {
 	quoteSlice := cache.quoteSlice
 	return &quoteSlice
 }
 
-func getTeachersFromCache() *[]TeacherT {
-	cache.mux.MinorLock()
-	defer cache.mux.MinorUnlock()
+func unsafeGetTeachersFromCache() *[]TeacherT {
 	teacherSlice := cache.teacherSlice
 
 	return &teacherSlice
 }
 
-func getQuotesByStringFromCache(text string) *[]QuoteT {
-	cache.mux.MinorLock()
-	defer cache.mux.MinorUnlock()
-
+func unsafeGetQuotesByStringFromCache(text string) *[]QuoteT {
 	quoteSlice := cache.quoteSlice
 
 	for word, count := range getWordsFromString(text) {
