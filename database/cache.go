@@ -117,7 +117,7 @@ func unsafeClearCache() {
 func unsafeAddQuoteToCache(q QuoteT) error {
 
 	cache.quoteSlice = append(cache.quoteSlice, q)
-	var enumID int32 = int32(len(cache.quoteSlice) - 1)
+	enumID := int32(len(cache.quoteSlice) - 1)
 
 	if enumID < 0 {
 		return errors.New("unsafeAddQuoteToCache: could not add quote to quoteSlice of cache")
