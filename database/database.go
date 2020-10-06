@@ -397,9 +397,36 @@ func DeleteTeacher() {
 /* -------------------------------------------------------------------------- */
 
 // GetUnverifiedQuotes returns a slice containing all unverified quotes
-func GetUnverifiedQuotes() {
+func GetUnverifiedQuotes() (*[]UnverifiedQuoteT, error) {
 	globalMutex.MinorLock()
 	defer globalMutex.MinorUnlock()
+
+	// get all unverifiedQuotes from PostgreSQL database
+	rows, err := postgresDatabase.Query(`SELECT
+		QuoteID,
+		TeacherID, 
+		TeacherName, 
+		Context,
+		Text,
+		Unixtime,
+		IPHash FROM unverifiedQuotes`)
+	if err != nil {
+		return nil, errors.New("GetUnverifiedQuotes: loading teachers from database failed: " + err.Error())
+	}
+
+	var quotes []UnverifiedQuoteT
+
+	// Iterate over all unverifiedQuotes from PostgreSQL database
+	for rows.Next() {
+		// Get unverifiedQuotes data
+		var q UnverifiedQuoteT
+		rows.Scan(&q.QuoteID, &q.TeacherID, &q.TeacherName, &q.Context, &q.Text, &q.Unixtime, &q.IPHash)
+
+		// Add unverifiedQuote to return slice
+		quotes = append(quotes, q)
+	}
+
+	return &quotes, nil
 }
 
 // CreateUnverifiedQuote stores an unverified quote
