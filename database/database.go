@@ -155,11 +155,11 @@ func Setup() error {
 	_, err = postgresDatabase.Exec(
 		`CREATE TABLE IF NOT EXISTS unverifiedQuotes (
 		QuoteID serial PRIMARY KEY,
-		TeacherID integer REFERENCES teachers (TeacherID), 
+		TeacherID integer, 
 		TeacherName varchar, 
 		Context varchar,
 		Text varchar,
-		Unictime bigint,
+		Unixtime bigint,
 		IPHash bigint)`)
 	if err != nil {
 		postgresDatabase.Close()
@@ -403,9 +403,28 @@ func GetUnverifiedQuotes() {
 }
 
 // CreateUnverifiedQuote stores an unverified quote
-func CreateUnverifiedQuote() {
+func CreateUnverifiedQuote(q UnverifiedQuoteT) error {
 	globalMutex.MinorLock()
 	defer globalMutex.MinorUnlock()
+
+	var err error
+
+	// Verify connection to PostgreSQL database
+	err = postgresDatabase.Ping()
+	if err != nil {
+		postgresDatabase.Close()
+		return errors.New("CreateUnverifiedQuote: pinging database failed: " + err.Error())
+	}
+
+	// add quote to postgresDatabase
+	_, err = postgresDatabase.Exec(
+		`INSERT INTO unverifiedQuotes (TeacherID, TeacherName, Context, Text, Unixtime, IPHash) VALUES ($1, $2, $3, $4, $5, $6)`,
+		q.TeacherID, q.TeacherName, q.Context, q.Text, q.Unixtime, q.IPHash)
+	if err != nil {
+		return errors.New("CreateUnverifiedQuote: inserting quote into database failed: " + err.Error())
+	}
+
+	return nil
 }
 
 // UpdateUnverifiedQuote updates an unverified quote
