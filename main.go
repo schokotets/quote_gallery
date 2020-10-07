@@ -34,21 +34,23 @@ func handlerQuotes(w http.ResponseWriter, r *http.Request) {
 			TeacherID: uint32(teacherid),
 			Unixtime:  uint64(time.Now().Unix())})
 	}
-	quotes := database.GetQuotes()
+	quotes, _ := database.GetQuotes()
 	tmpl := template.Must(template.ParseFiles("quotes.html"))
 	tmpl.Execute(w, quotes)
 }
 
 func pageSubmit(w http.ResponseWriter, r *http.Request) {
-	teachers := database.GetTeachers()
+	teachers, _ := database.GetTeachers()
 	tmpl := template.Must(template.ParseFiles("submit.html"))
 	tmpl.Execute(w, teachers)
 }
 
 func main() {
 	log.Print("Connecting to database on :5432")
-	database.Setup()
+	database.Connect()
 	defer database.CloseAndClearCache()
+
+	database.Initialize()
 
 	log.Print("Starting website on :8080")
 	http.HandleFunc("/", handlerMain)
