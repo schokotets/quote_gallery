@@ -184,8 +184,8 @@ func CloseAndClearCache() {
 // ExecuteQuery runs a query on the database and returns the error
 // This function is to be used in a testing environment
 func ExecuteQuery(query string) error {
-	globalMutex.MinorLock()
-	defer globalMutex.MinorUnlock()
+	globalMutex.MajorLock()
+	defer globalMutex.MajorUnlock()
 
 	_, err := postgresDatabase.Exec(query)
 	return err
