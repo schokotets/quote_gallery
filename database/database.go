@@ -529,13 +529,32 @@ func CreateUnverifiedQuote(q UnverifiedQuoteT) error {
 }
 
 // UpdateUnverifiedQuote updates an unverified quote
-func UpdateUnverifiedQuote() error {
+func UpdateUnverifiedQuote(q UnverifiedQuoteT) error {
 	if postgresDatabase == nil {
-		return errors.New("UpdateUnverifiedQuote: not connected to database")
+		return errors.New("DeleteUnverifiedQuote: not connected to database")
 	}
 
 	globalMutex.MinorLock()
 	defer globalMutex.MinorUnlock()
+
+	// Verify connection to PostgreSQL database
+	err := postgresDatabase.Ping()
+	if err != nil {
+		postgresDatabase.Close()
+		return errors.New("UpdateTeacher: pinging database failed: " + err.Error())
+	}
+
+	// try to find corresponding entry postgresDatabase and overwrite it
+	var res sql.Result
+	res, err = postgresDatabase.Exec(
+		`UPDATE unverifiedQuotes SET TeacherID=$2, TeacherName=$3, Context=$4, Text=$5, Unixtime=$6, IPHash=$7 WHERE  QuoteID=$1`,
+		q.QuoteID, q.TeacherID, q.TeacherName, q.Context, q.Text, q.Unixtime, q.IPHash)
+	if err != nil {
+		return errors.New("UpdateUnverifiedQuote: updating unverifiedQuote in database failed: " + err.Error())
+	}
+	if rowsAffected, _ := res.RowsAffected(); rowsAffected == 0 {
+		return errors.New("UpdateUnverifiedQuote: could not find specified database row for updating")
+	}
 
 	return nil
 }
