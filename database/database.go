@@ -424,7 +424,7 @@ func UpdateTeacher(t TeacherT) error {
 	if err != nil {
 		return errors.New("UpdateTeacher: updating teacher in database failed: " + err.Error())
 	}
-	if rowsAffected, _ := res.RowsAffected(); rowsAffected != 0 {
+	if rowsAffected, _ := res.RowsAffected(); rowsAffected == 0 {
 		return errors.New("UpdateTeacher: could not find specified database row for updating")
 	}
 
