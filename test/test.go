@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"quote_gallery/database"
 )
@@ -14,15 +15,15 @@ func main() {
 	if err != nil {
 		log.Fatal("Cannot start transaction: ", err)
 	}
-	err = database.ExecuteQuery("DELETE FROM unverifiedQuotes")
+	err = database.ExecuteQuery("DELETE FROM unverifiedQuotes; ALTER SEQUENCE unverifiedquotes_quoteid_seq RESTART")
 	if err != nil {
 		log.Fatal("Cannot temp-delete quotes: ", err)
 	}
-	err = database.ExecuteQuery("DELETE FROM quotes")
+	err = database.ExecuteQuery("DELETE FROM quotes; ALTER SEQUENCE quotes_quoteid_seq RESTART")
 	if err != nil {
 		log.Fatal("Cannot temp-delete quotes: ", err)
 	}
-	err = database.ExecuteQuery("DELETE FROM teachers")
+	err = database.ExecuteQuery("DELETE FROM teachers; ALTER SEQUENCE teachers_teacherid_seq RESTART")
 	if err != nil {
 		log.Fatal("Cannot temp-delete teachers: ", err)
 	}
@@ -81,8 +82,8 @@ func main() {
 		Unixtime:    23489576485,
 	}))
 
-	//j, _ := database.GetQuotes()
-	//fmt.Println(j)
+	j, _ := database.GetUnverifiedQuotes()
+	fmt.Println(j)
 
 	database.ExecuteQuery("ROLLBACK")
 }
