@@ -88,13 +88,12 @@ var globalMutex Mutex = Mutex{0, 0, false}
 /*                         EXPORTED GENERAL FUNCTIONS                         */
 /* -------------------------------------------------------------------------- */
 
-// Setup initializes the database backend
-// Initialize postgres database
-// Create cache from postgresDatabase
+// Connect establishes the connection to the PostgresSQL database and therefore
+// needs to be called before any other function of database.go
 //
-// Must be called once at startup before any of the other database functions
-// Can be called during operation to reload the cache
-func Setup() error {
+// Notice: Connect doesn't initialize any tables or the cache, hence Initialize should be called
+// right afterwards.
+func Connect() error {
 	globalMutex.MajorLock()
 	defer globalMutex.MajorUnlock()
 
@@ -112,14 +111,30 @@ func Setup() error {
 		dbname=quote_gallery 
 		sslmode=disable`)
 	if err != nil {
-		return errors.New("Setup: connecting to database failed: " + err.Error())
+		return errors.New("Connect: connecting to database failed: " + err.Error())
+	}
+
+	return nil
+}
+
+// Initialize creates all the required tables in PostgreSQL database, if they don't already exist
+// and initializes the cache from the PostgreSQL database.
+//
+// Therefore it must be called before any other function of database.go despite Connect, which
+// needs to been have called for Initialize to work
+func Initialize() error {
+	globalMutex.MajorLock()
+	defer globalMutex.MajorUnlock()
+
+	if postgresDatabase == nil {
+		return errors.New("Initialize: not connected to database")
 	}
 
 	// Verify connection to PostgreSQL database
-	err = postgresDatabase.Ping()
+	err := postgresDatabase.Ping()
 	if err != nil {
 		postgresDatabase.Close()
-		return errors.New("Setup: pinging database failed: " + err.Error())
+		return errors.New("Initialize: pinging database failed: " + err.Error())
 	}
 
 	// Create teachers table in PostgreSQL database if it doesn't exist
@@ -132,7 +147,7 @@ func Setup() error {
 		Note varchar)`)
 	if err != nil {
 		postgresDatabase.Close()
-		return errors.New("Setup: creating teachers table failed: " + err.Error())
+		return errors.New("Initialize: creating teachers table failed: " + err.Error())
 	}
 
 	// Create quotes table in PostgreSQL database if it doesn't exist
@@ -147,7 +162,7 @@ func Setup() error {
 		Upvotes integer)`)
 	if err != nil {
 		postgresDatabase.Close()
-		return errors.New("Setup: creating quotes table failed: " + err.Error())
+		return errors.New("Initialize: creating quotes table failed: " + err.Error())
 	}
 
 	// Create unverifiedQuotes table in PostgreSQL database if it doesn't exist
@@ -163,7 +178,7 @@ func Setup() error {
 		IPHash bigint)`)
 	if err != nil {
 		postgresDatabase.Close()
-		return errors.New("Setup: creating unverifiedQuotes table failed: " + err.Error())
+		return errors.New("Initialize: creating unverifiedQuotes table failed: " + err.Error())
 	}
 
 	unsafeLoadCache()
@@ -284,7 +299,7 @@ func UpdateQuote(q QuoteT) error {
 
 		log.Panic("UpdateQuote: unsafeOverwriteQuoteInCache returned: " + err.Error())
 		log.Panic("Cache is out of sync with database, trying to reload")
-		go Setup()
+		go Initialize()
 	}
 
 	return nil
@@ -380,7 +395,7 @@ func UpdateTeacher(t TeacherT) error {
 
 		log.Panic("UpdateQuote: unsafeOverwriteTeacherInCache returned: " + err.Error())
 		log.Panic("Cache is out of sync with database, trying to reload")
-		go Setup()
+		go Initialize()
 	}
 
 	return nil
