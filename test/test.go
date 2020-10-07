@@ -8,25 +8,18 @@ import (
 
 func main() {
 	log.Print("Connecting to database on :5432")
-	database.Setup()
-	defer database.CloseAndClearCache()
+	database.Connect()
 
 	err := database.ExecuteQuery("START TRANSACTION")
 	if err != nil {
 		log.Fatal("Cannot start transaction: ", err)
 	}
-	err = database.ExecuteQuery("DELETE FROM unverifiedQuotes; ALTER SEQUENCE unverifiedquotes_quoteid_seq RESTART")
+	err = database.ExecuteQuery("DROP TABLE IF EXISTS teachers, quotes, unverifiedQuotes")
 	if err != nil {
-		log.Fatal("Cannot temp-delete quotes: ", err)
+		log.Fatal("Cannot temp-delete tables: ", err)
 	}
-	err = database.ExecuteQuery("DELETE FROM quotes; ALTER SEQUENCE quotes_quoteid_seq RESTART")
-	if err != nil {
-		log.Fatal("Cannot temp-delete quotes: ", err)
-	}
-	err = database.ExecuteQuery("DELETE FROM teachers; ALTER SEQUENCE teachers_teacherid_seq RESTART")
-	if err != nil {
-		log.Fatal("Cannot temp-delete teachers: ", err)
-	}
+
+	database.Initialize()
 
 	// database.CreateTeacher(database.TeacherT{Name: "Heimburg", Title: "Herr", Note: "Sp Ge"})
 	// database.CreateTeacher(database.TeacherT{Name: "Spreer", Title: "Frau", Note: "Sp Eth"})
