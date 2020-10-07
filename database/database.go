@@ -123,12 +123,12 @@ func Connect() error {
 // Therefore it must be called before any other function of database.go despite Connect, which
 // needs to been have called for Initialize to work
 func Initialize() error {
-	globalMutex.MajorLock()
-	defer globalMutex.MajorUnlock()
-
 	if postgresDatabase == nil {
 		return errors.New("Initialize: not connected to database")
 	}
+
+	globalMutex.MajorLock()
+	defer globalMutex.MajorUnlock()
 
 	// Verify connection to PostgreSQL database
 	err := postgresDatabase.Ping()
@@ -188,17 +188,27 @@ func Initialize() error {
 }
 
 // CloseAndClearCache closes postgreSQL database and cache
-func CloseAndClearCache() {
+func CloseAndClearCache() error {
+	if postgresDatabase == nil {
+		return errors.New("CloseAndClearCache: not connected to database")
+	}
+
 	globalMutex.MajorLock()
 	defer globalMutex.MajorUnlock()
 
 	postgresDatabase.Close()
 	unsafeClearCache()
+
+	return nil
 }
 
 // ExecuteQuery runs a query on the database and returns the error
 // This function is to be used in a testing environment
 func ExecuteQuery(query string) error {
+	if postgresDatabase == nil {
+		return errors.New("ExecuteQuery: not connected to database")
+	}
+
 	globalMutex.MajorLock()
 	defer globalMutex.MajorUnlock()
 
@@ -212,26 +222,38 @@ func ExecuteQuery(query string) error {
 
 // GetQuotes returns a slice containing all quotes
 // The weight variable will be zero
-func GetQuotes() *[]QuoteT {
+func GetQuotes() (*[]QuoteT, error) {
+	if postgresDatabase == nil {
+		return nil, errors.New("GetQuotes: not connected to database")
+	}
+
 	globalMutex.MinorLock()
 	defer globalMutex.MinorUnlock()
 
 	// get quotes from cache
-	return unsafeGetQuotesFromCache()
+	return unsafeGetQuotesFromCache(), nil
 }
 
 // GetQuotesByString returns a slice containing all quotes
 // The weight variable will indicate how well the given text matches the corresponding quote
-func GetQuotesByString(text string) *[]QuoteT {
+func GetQuotesByString(text string) (*[]QuoteT, error) {
+	if postgresDatabase == nil {
+		return nil, errors.New("GetQuotesByString: not connected to database")
+	}
+
 	globalMutex.MinorLock()
 	defer globalMutex.MinorUnlock()
 
 	// get weighted quotes from cache
-	return unsafeGetQuotesByStringFromCache(text)
+	return unsafeGetQuotesByStringFromCache(text), nil
 }
 
 // CreateQuote creates a new quote
 func CreateQuote(q QuoteT) error {
+	if postgresDatabase == nil {
+		return errors.New("CreateQuote: not connected to database")
+	}
+
 	globalMutex.MajorLock()
 	defer globalMutex.MajorUnlock()
 
@@ -260,6 +282,10 @@ func CreateQuote(q QuoteT) error {
 
 // UpdateQuote updates an existing quote by given QuoteID
 func UpdateQuote(q QuoteT) error {
+	if postgresDatabase == nil {
+		return errors.New("UpdateQuote: not connected to database")
+	}
+
 	globalMutex.MajorLock()
 	defer globalMutex.MajorUnlock()
 
@@ -307,9 +333,15 @@ func UpdateQuote(q QuoteT) error {
 
 // DeleteQuote deletes the quote corresponding to the given ID from the database and the quotes slice
 // It will also modifiy the words map
-func DeleteQuote(ID int) {
+func DeleteQuote(ID int) error {
+	if postgresDatabase == nil {
+		return errors.New("DeleteQuote: not connected to database")
+	}
+
 	globalMutex.MajorLock()
 	defer globalMutex.MajorUnlock()
+
+	return nil
 }
 
 /* -------------------------------------------------------------------------- */
@@ -318,16 +350,24 @@ func DeleteQuote(ID int) {
 
 // GetTeachers returns a slice containing all teachers
 // The returned slice is not sorted
-func GetTeachers() *[]TeacherT {
+func GetTeachers() (*[]TeacherT, error) {
+	if postgresDatabase == nil {
+		return nil, errors.New("GetTeachers: not connected to database")
+	}
+
 	globalMutex.MinorLock()
 	defer globalMutex.MinorUnlock()
 
 	// get teachers from cache
-	return unsafeGetTeachersFromCache()
+	return unsafeGetTeachersFromCache(), nil
 }
 
 // CreateTeacher creates a new teacher
 func CreateTeacher(t TeacherT) error {
+	if postgresDatabase == nil {
+		return errors.New("CreateTeacher: not connected to database")
+	}
+
 	globalMutex.MajorLock()
 	defer globalMutex.MajorUnlock()
 
@@ -356,6 +396,10 @@ func CreateTeacher(t TeacherT) error {
 
 // UpdateTeacher updates a teacher by given TeacherID
 func UpdateTeacher(t TeacherT) error {
+	if postgresDatabase == nil {
+		return errors.New("UpdateTeacher: not connected to database")
+	}
+
 	globalMutex.MajorLock()
 	defer globalMutex.MajorUnlock()
 
@@ -403,9 +447,15 @@ func UpdateTeacher(t TeacherT) error {
 
 // DeleteTeacher deletes the teacher corresponding to the given ID from the database and the teachers slice
 // It will delete all corresponding quotes
-func DeleteTeacher() {
+func DeleteTeacher() error {
+	if postgresDatabase == nil {
+		return errors.New("DeleteTeacher: not connected to database")
+	}
+
 	globalMutex.MajorLock()
 	defer globalMutex.MajorUnlock()
+
+	return nil
 }
 
 /* -------------------------------------------------------------------------- */
@@ -414,6 +464,10 @@ func DeleteTeacher() {
 
 // GetUnverifiedQuotes returns a slice containing all unverified quotes
 func GetUnverifiedQuotes() (*[]UnverifiedQuoteT, error) {
+	if postgresDatabase == nil {
+		return nil, errors.New("GetUnverifiedQuotes: not connected to database")
+	}
+
 	globalMutex.MinorLock()
 	defer globalMutex.MinorUnlock()
 
@@ -447,6 +501,10 @@ func GetUnverifiedQuotes() (*[]UnverifiedQuoteT, error) {
 
 // CreateUnverifiedQuote stores an unverified quote
 func CreateUnverifiedQuote(q UnverifiedQuoteT) error {
+	if postgresDatabase == nil {
+		return errors.New("CreateUnverifiedQuote: not connected to database")
+	}
+
 	globalMutex.MinorLock()
 	defer globalMutex.MinorUnlock()
 
@@ -471,13 +529,25 @@ func CreateUnverifiedQuote(q UnverifiedQuoteT) error {
 }
 
 // UpdateUnverifiedQuote updates an unverified quote
-func UpdateUnverifiedQuote() {
+func UpdateUnverifiedQuote() error {
+	if postgresDatabase == nil {
+		return errors.New("UpdateUnverifiedQuote: not connected to database")
+	}
+
 	globalMutex.MinorLock()
 	defer globalMutex.MinorUnlock()
+
+	return nil
 }
 
 // DeleteUnverifiedQuote deletes an unverified quote
-func DeleteUnverifiedQuote() {
+func DeleteUnverifiedQuote() error {
+	if postgresDatabase == nil {
+		return errors.New("DeleteUnverifiedQuote: not connected to database")
+	}
+
 	globalMutex.MinorLock()
 	defer globalMutex.MinorUnlock()
+
+	return nil
 }
