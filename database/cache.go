@@ -9,8 +9,8 @@ import (
 /*                          GLOBAL PACKAGE VARIABLES                          */
 /* -------------------------------------------------------------------------- */
 
-// Created from PostgreSQL database at (re)start
-// cache is a cache of the postgreSQL database to speed up read operations
+// Created from database at (re)start
+// cache is a cache of the database to speed up read operations
 //
 // unverified quotes will not be cached in the local database, because read operations
 // will only be performed by the operator and thus be very rare
@@ -27,25 +27,25 @@ var cache struct {
 /*                         UNEXPORTED CACHE FUNCTIONS                         */
 /* -------------------------------------------------------------------------- */
 
-// Fills cache from PostgreSQL database
+// Fills cache from database
 // unsafe functions aren't concurrency safe
 func unsafeLoadCache() error {
 	var err error
 
 	unsafeClearCache()
 
-	log.Print("Filling cache from PostgreSQL database...")
+	log.Print("Filling cache from database...")
 
-	// Verify connection to PostgreSQL database
-	err = postgresDatabase.Ping()
+	// Verify connection to database
+	err = database.Ping()
 	if err != nil {
 		return errors.New("unsafeLoadCache: pinging database failed" + err.Error())
 	}
 
 	/* --------------------------------- QUOTES --------------------------------- */
 
-	// get all quotes from PostgreSQL database
-	rows, err := postgresDatabase.Query(`SELECT 
+	// get all quotes from database
+	rows, err := database.Query(`SELECT 
 		QuoteID,
 		TeacherID, 
 		Context,
@@ -60,7 +60,7 @@ func unsafeLoadCache() error {
 	// initialize wordsMap of cache
 	cache.wordsMap = make(map[string]wordsMapT)
 
-	// Iterrate over all quotes from PostgreSQL database
+	// Iterrate over all quotes from database
 	for rows.Next() {
 		// Get id and text of quote
 		var q QuoteT
@@ -78,8 +78,8 @@ func unsafeLoadCache() error {
 
 	/* -------------------------------- TEACHERS -------------------------------- */
 
-	// get all teachers from PostgreSQL database
-	rows, err = postgresDatabase.Query(`SELECT
+	// get all teachers from database
+	rows, err = database.Query(`SELECT
 		TeacherID, 
 		Name, 
 		Title, 
@@ -89,7 +89,7 @@ func unsafeLoadCache() error {
 		return errors.New("unsafeLoadCache: loading teachers from database failed: " + err.Error())
 	}
 
-	// Iterate over all teachers from PostgreSQL database
+	// Iterate over all teachers from database
 	for rows.Next() {
 		// Get teacher data (id, name, title, note)
 		var t TeacherT

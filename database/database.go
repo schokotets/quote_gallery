@@ -21,7 +21,7 @@ import (
 // Unixtime   optional
 // Upvotes    optional
 //
-// match  	  only locally, not safed in PostgreSQL database!
+// match  	  only locally, not safed in database!
 //			  used by GetQuotesFromString to quantify how well this quote fits the string
 type QuoteT struct {
 	QuoteID   uint32
@@ -77,8 +77,8 @@ type occurenceSliceT struct {
 /*                          GLOBAL PACKAGE VARIABLES                          */
 /* -------------------------------------------------------------------------- */
 
-// Handle to the PostgreSQL database, used as long time storage
-var postgresDatabase *sql.DB
+// Handle to the database, used as long time storage
+var database *sql.DB
 
 // globalMutex is to be used if a function of the database package must assure that every other
 // function is blocked
@@ -99,12 +99,12 @@ func Connect() error {
 
 	var err error
 
-	if postgresDatabase != nil {
-		postgresDatabase.Close()
-		postgresDatabase = nil
+	if database != nil {
+		database.Close()
+		database = nil
 	}
 
-	postgresDatabase, err = sql.Open(
+	database, err = sql.Open(
 		"postgres",
 		`user=postgres 
 		password=1234 
@@ -117,42 +117,42 @@ func Connect() error {
 	return nil
 }
 
-// Initialize creates all the required tables in PostgreSQL database, if they don't already exist
-// and initializes the cache from the PostgreSQL database.
+// Initialize creates all the required tables in database, if they don't already exist
+// and initializes the cache from the database.
 //
 // Therefore it must be called before any other function of database.go despite Connect, which
 // needs to been have called for Initialize to work
 func Initialize() error {
-	if postgresDatabase == nil {
+	if database == nil {
 		return errors.New("Initialize: not connected to database")
 	}
 
 	globalMutex.MajorLock()
 	defer globalMutex.MajorUnlock()
 
-	// Verify connection to PostgreSQL database
-	err := postgresDatabase.Ping()
+	// Verify connection to database
+	err := database.Ping()
 	if err != nil {
-		postgresDatabase.Close()
+		database.Close()
 		return errors.New("Initialize: pinging database failed: " + err.Error())
 	}
 
-	// Create teachers table in PostgreSQL database if it doesn't exist
+	// Create teachers table in database if it doesn't exist
 	// for more information see TeachersT declaration
-	_, err = postgresDatabase.Exec(
+	_, err = database.Exec(
 		`CREATE TABLE IF NOT EXISTS teachers (
 		TeacherID serial PRIMARY KEY, 
 		Name varchar, 
 		Title varchar, 
 		Note varchar)`)
 	if err != nil {
-		postgresDatabase.Close()
+		database.Close()
 		return errors.New("Initialize: creating teachers table failed: " + err.Error())
 	}
 
-	// Create quotes table in PostgreSQL database if it doesn't exist
+	// Create quotes table in database if it doesn't exist
 	// for more information see QuoteT declaration
-	_, err = postgresDatabase.Exec(
+	_, err = database.Exec(
 		`CREATE TABLE IF NOT EXISTS quotes (
 		QuoteID serial PRIMARY KEY,
 		TeacherID integer REFERENCES teachers (TeacherID), 
@@ -161,13 +161,13 @@ func Initialize() error {
 		Unixtime bigint,
 		Upvotes integer)`)
 	if err != nil {
-		postgresDatabase.Close()
+		database.Close()
 		return errors.New("Initialize: creating quotes table failed: " + err.Error())
 	}
 
-	// Create unverifiedQuotes table in PostgreSQL database if it doesn't exist
+	// Create unverifiedQuotes table in database if it doesn't exist
 	// for more information see UnverifiedQuoteT declaration
-	_, err = postgresDatabase.Exec(
+	_, err = database.Exec(
 		`CREATE TABLE IF NOT EXISTS unverifiedQuotes (
 		QuoteID serial PRIMARY KEY,
 		TeacherID integer, 
@@ -177,7 +177,7 @@ func Initialize() error {
 		Unixtime bigint,
 		IPHash bigint)`)
 	if err != nil {
-		postgresDatabase.Close()
+		database.Close()
 		return errors.New("Initialize: creating unverifiedQuotes table failed: " + err.Error())
 	}
 
@@ -187,16 +187,16 @@ func Initialize() error {
 
 }
 
-// CloseAndClearCache closes postgreSQL database and cache
+// CloseAndClearCache closes database and cache
 func CloseAndClearCache() error {
-	if postgresDatabase == nil {
+	if database == nil {
 		return errors.New("CloseAndClearCache: not connected to database")
 	}
 
 	globalMutex.MajorLock()
 	defer globalMutex.MajorUnlock()
 
-	postgresDatabase.Close()
+	database.Close()
 	unsafeClearCache()
 
 	return nil
@@ -205,14 +205,14 @@ func CloseAndClearCache() error {
 // ExecuteQuery runs a query on the database and returns the error
 // This function is to be used in a testing environment
 func ExecuteQuery(query string) error {
-	if postgresDatabase == nil {
+	if database == nil {
 		return errors.New("ExecuteQuery: not connected to database")
 	}
 
 	globalMutex.MajorLock()
 	defer globalMutex.MajorUnlock()
 
-	_, err := postgresDatabase.Exec(query)
+	_, err := database.Exec(query)
 	return err
 }
 
@@ -223,7 +223,7 @@ func ExecuteQuery(query string) error {
 // GetQuotes returns a slice containing all quotes
 // The weight variable will be zero
 func GetQuotes() (*[]QuoteT, error) {
-	if postgresDatabase == nil {
+	if database == nil {
 		return nil, errors.New("GetQuotes: not connected to database")
 	}
 
@@ -237,7 +237,7 @@ func GetQuotes() (*[]QuoteT, error) {
 // GetQuotesByString returns a slice containing all quotes
 // The weight variable will indicate how well the given text matches the corresponding quote
 func GetQuotesByString(text string) (*[]QuoteT, error) {
-	if postgresDatabase == nil {
+	if database == nil {
 		return nil, errors.New("GetQuotesByString: not connected to database")
 	}
 
@@ -250,7 +250,7 @@ func GetQuotesByString(text string) (*[]QuoteT, error) {
 
 // CreateQuote creates a new quote
 func CreateQuote(q QuoteT) error {
-	if postgresDatabase == nil {
+	if database == nil {
 		return errors.New("CreateQuote: not connected to database")
 	}
 
@@ -259,15 +259,15 @@ func CreateQuote(q QuoteT) error {
 
 	var err error
 
-	// Verify connection to PostgreSQL database
-	err = postgresDatabase.Ping()
+	// Verify connection to database
+	err = database.Ping()
 	if err != nil {
-		postgresDatabase.Close()
+		database.Close()
 		return errors.New("CreateQuote: pinging database failed: " + err.Error())
 	}
 
-	// add quote to postgresDatabase
-	err = postgresDatabase.QueryRow(
+	// add quote to database
+	err = database.QueryRow(
 		`INSERT INTO quotes (TeacherID, Context, Text, Unixtime, Upvotes) VALUES ($1, $2, $3, $4, $5) RETURNING QuoteID`,
 		q.TeacherID, q.Context, q.Text, q.Unixtime, q.Upvotes).Scan(&q.QuoteID)
 	if err != nil {
@@ -282,7 +282,7 @@ func CreateQuote(q QuoteT) error {
 
 // UpdateQuote updates an existing quote by given QuoteID
 func UpdateQuote(q QuoteT) error {
-	if postgresDatabase == nil {
+	if database == nil {
 		return errors.New("UpdateQuote: not connected to database")
 	}
 
@@ -295,16 +295,16 @@ func UpdateQuote(q QuoteT) error {
 		return errors.New("UpdateQuote: QuoteID is zero")
 	}
 
-	// Verify connection to PostgreSQL database
-	err = postgresDatabase.Ping()
+	// Verify connection to database
+	err = database.Ping()
 	if err != nil {
-		postgresDatabase.Close()
+		database.Close()
 		return errors.New("UpdateQuote: pinging database failed: " + err.Error())
 	}
 
-	// try to find corresponding entry postgresDatabase and overwrite it
+	// try to find corresponding entry database and overwrite it
 	var res sql.Result
-	res, err = postgresDatabase.Exec(
+	res, err = database.Exec(
 		`UPDATE quotes SET TeacherID=$2, Context=$3, Text=$4, Unixtime=$5, Upvotes=$6 WHERE QuoteID=$1`,
 		q.QuoteID, q.TeacherID, q.Context, q.Text, q.Unixtime, q.Upvotes)
 	if err != nil {
@@ -334,7 +334,7 @@ func UpdateQuote(q QuoteT) error {
 // DeleteQuote deletes the quote corresponding to the given ID from the database and the quotes slice
 // It will also modifiy the words map
 func DeleteQuote(ID int) error {
-	if postgresDatabase == nil {
+	if database == nil {
 		return errors.New("DeleteQuote: not connected to database")
 	}
 
@@ -351,7 +351,7 @@ func DeleteQuote(ID int) error {
 // GetTeachers returns a slice containing all teachers
 // The returned slice is not sorted
 func GetTeachers() (*[]TeacherT, error) {
-	if postgresDatabase == nil {
+	if database == nil {
 		return nil, errors.New("GetTeachers: not connected to database")
 	}
 
@@ -364,7 +364,7 @@ func GetTeachers() (*[]TeacherT, error) {
 
 // CreateTeacher creates a new teacher
 func CreateTeacher(t TeacherT) error {
-	if postgresDatabase == nil {
+	if database == nil {
 		return errors.New("CreateTeacher: not connected to database")
 	}
 
@@ -373,15 +373,15 @@ func CreateTeacher(t TeacherT) error {
 
 	var err error
 
-	// Verify connection to PostgreSQL database
-	err = postgresDatabase.Ping()
+	// Verify connection to database
+	err = database.Ping()
 	if err != nil {
-		postgresDatabase.Close()
+		database.Close()
 		return errors.New("CreateTeacher: pinging database failed: " + err.Error())
 	}
 
-	// add teacher to postgresDatabase
-	err = postgresDatabase.QueryRow(
+	// add teacher to database
+	err = database.QueryRow(
 		`INSERT INTO teachers (Name, Title, Note) VALUES ($1, $2, $3) RETURNING TeacherID`,
 		t.Name, t.Title, t.Note).Scan(&t.TeacherID)
 	if err != nil {
@@ -396,7 +396,7 @@ func CreateTeacher(t TeacherT) error {
 
 // UpdateTeacher updates a teacher by given TeacherID
 func UpdateTeacher(t TeacherT) error {
-	if postgresDatabase == nil {
+	if database == nil {
 		return errors.New("UpdateTeacher: not connected to database")
 	}
 
@@ -409,16 +409,16 @@ func UpdateTeacher(t TeacherT) error {
 		return errors.New("UpdateTeacher: TeacherID is zero")
 	}
 
-	// Verify connection to PostgreSQL database
-	err = postgresDatabase.Ping()
+	// Verify connection to database
+	err = database.Ping()
 	if err != nil {
-		postgresDatabase.Close()
+		database.Close()
 		return errors.New("UpdateTeacher: pinging database failed: " + err.Error())
 	}
 
-	// try to find corresponding entry postgresDatabase and overwrite it
+	// try to find corresponding entry database and overwrite it
 	var res sql.Result
-	res, err = postgresDatabase.Exec(
+	res, err = database.Exec(
 		`UPDATE teachers SET Name=$2, Title=$3, Note=$4 WHERE TeacherID=$1`,
 		t.TeacherID, t.Name, t.Title, t.Note)
 	if err != nil {
@@ -448,7 +448,7 @@ func UpdateTeacher(t TeacherT) error {
 // DeleteTeacher deletes the teacher corresponding to the given ID from the database and the teachers slice
 // It will delete all corresponding quotes
 func DeleteTeacher() error {
-	if postgresDatabase == nil {
+	if database == nil {
 		return errors.New("DeleteTeacher: not connected to database")
 	}
 
@@ -464,15 +464,15 @@ func DeleteTeacher() error {
 
 // GetUnverifiedQuotes returns a slice containing all unverified quotes
 func GetUnverifiedQuotes() (*[]UnverifiedQuoteT, error) {
-	if postgresDatabase == nil {
+	if database == nil {
 		return nil, errors.New("GetUnverifiedQuotes: not connected to database")
 	}
 
 	globalMutex.MinorLock()
 	defer globalMutex.MinorUnlock()
 
-	// get all unverifiedQuotes from PostgreSQL database
-	rows, err := postgresDatabase.Query(`SELECT
+	// get all unverifiedQuotes from database
+	rows, err := database.Query(`SELECT
 		QuoteID,
 		TeacherID, 
 		TeacherName, 
@@ -486,7 +486,7 @@ func GetUnverifiedQuotes() (*[]UnverifiedQuoteT, error) {
 
 	var quotes []UnverifiedQuoteT
 
-	// Iterate over all unverifiedQuotes from PostgreSQL database
+	// Iterate over all unverifiedQuotes from database
 	for rows.Next() {
 		// Get unverifiedQuotes data
 		var q UnverifiedQuoteT
@@ -501,7 +501,7 @@ func GetUnverifiedQuotes() (*[]UnverifiedQuoteT, error) {
 
 // CreateUnverifiedQuote stores an unverified quote
 func CreateUnverifiedQuote(q UnverifiedQuoteT) error {
-	if postgresDatabase == nil {
+	if database == nil {
 		return errors.New("CreateUnverifiedQuote: not connected to database")
 	}
 
@@ -510,15 +510,15 @@ func CreateUnverifiedQuote(q UnverifiedQuoteT) error {
 
 	var err error
 
-	// Verify connection to PostgreSQL database
-	err = postgresDatabase.Ping()
+	// Verify connection to database
+	err = database.Ping()
 	if err != nil {
-		postgresDatabase.Close()
+		database.Close()
 		return errors.New("CreateUnverifiedQuote: pinging database failed: " + err.Error())
 	}
 
-	// add quote to postgresDatabase
-	_, err = postgresDatabase.Exec(
+	// add quote to database
+	_, err = database.Exec(
 		`INSERT INTO unverifiedQuotes (TeacherID, TeacherName, Context, Text, Unixtime, IPHash) VALUES ($1, $2, $3, $4, $5, $6)`,
 		q.TeacherID, q.TeacherName, q.Context, q.Text, q.Unixtime, q.IPHash)
 	if err != nil {
@@ -530,23 +530,23 @@ func CreateUnverifiedQuote(q UnverifiedQuoteT) error {
 
 // UpdateUnverifiedQuote updates an unverified quote
 func UpdateUnverifiedQuote(q UnverifiedQuoteT) error {
-	if postgresDatabase == nil {
+	if database == nil {
 		return errors.New("DeleteUnverifiedQuote: not connected to database")
 	}
 
 	globalMutex.MinorLock()
 	defer globalMutex.MinorUnlock()
 
-	// Verify connection to PostgreSQL database
-	err := postgresDatabase.Ping()
+	// Verify connection to database
+	err := database.Ping()
 	if err != nil {
-		postgresDatabase.Close()
+		database.Close()
 		return errors.New("UpdateTeacher: pinging database failed: " + err.Error())
 	}
 
-	// try to find corresponding entry postgresDatabase and overwrite it
+	// try to find corresponding entry database and overwrite it
 	var res sql.Result
-	res, err = postgresDatabase.Exec(
+	res, err = database.Exec(
 		`UPDATE unverifiedQuotes SET TeacherID=$2, TeacherName=$3, Context=$4, Text=$5, Unixtime=$6, IPHash=$7 WHERE  QuoteID=$1`,
 		q.QuoteID, q.TeacherID, q.TeacherName, q.Context, q.Text, q.Unixtime, q.IPHash)
 	if err != nil {
@@ -561,22 +561,22 @@ func UpdateUnverifiedQuote(q UnverifiedQuoteT) error {
 
 // DeleteUnverifiedQuote deletes an unverified quote
 func DeleteUnverifiedQuote(ID int) error {
-	if postgresDatabase == nil {
+	if database == nil {
 		return errors.New("DeleteUnverifiedQuote: not connected to database")
 	}
 
 	globalMutex.MinorLock()
 	defer globalMutex.MinorUnlock()
 
-	// Verify connection to PostgreSQL database
-	err := postgresDatabase.Ping()
+	// Verify connection to database
+	err := database.Ping()
 	if err != nil {
-		postgresDatabase.Close()
+		database.Close()
 		return errors.New("UpdateTeacher: pinging database failed: " + err.Error())
 	}
 
-	// try to find corresponding entry in PostgreSQL database and delete it
-	_, err = postgresDatabase.Exec(
+	// try to find corresponding entry in database and delete it
+	_, err = database.Exec(
 		`DELETE FROM unverifiedQuotes WHERE  QuoteID=$1`, ID)
 	if err != nil {
 		return errors.New("DeleteUnverifiedQuote: deleting unverifiedQuote from database failed: " + err.Error())
