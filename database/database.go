@@ -560,13 +560,27 @@ func UpdateUnverifiedQuote(q UnverifiedQuoteT) error {
 }
 
 // DeleteUnverifiedQuote deletes an unverified quote
-func DeleteUnverifiedQuote() error {
+func DeleteUnverifiedQuote(ID int) error {
 	if postgresDatabase == nil {
 		return errors.New("DeleteUnverifiedQuote: not connected to database")
 	}
 
 	globalMutex.MinorLock()
 	defer globalMutex.MinorUnlock()
+
+	// Verify connection to PostgreSQL database
+	err := postgresDatabase.Ping()
+	if err != nil {
+		postgresDatabase.Close()
+		return errors.New("UpdateTeacher: pinging database failed: " + err.Error())
+	}
+
+	// try to find corresponding entry in PostgreSQL database and delete it
+	_, err = postgresDatabase.Exec(
+		`DELETE FROM unverifiedQuotes WHERE  QuoteID=$1`, ID)
+	if err != nil {
+		return errors.New("DeleteUnverifiedQuote: deleting unverifiedQuote from database failed: " + err.Error())
+	}
 
 	return nil
 }
