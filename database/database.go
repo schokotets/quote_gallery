@@ -333,7 +333,7 @@ func UpdateQuote(q QuoteT) error {
 
 // DeleteQuote deletes the quote corresponding to the given ID from the database and the quotes slice
 // It will also modifiy the words map
-func DeleteQuote(ID int) error {
+func DeleteQuote(ID uint32) error {
 	if database == nil {
 		return errors.New("DeleteQuote: not connected to database")
 	}
@@ -560,7 +560,7 @@ func UpdateUnverifiedQuote(q UnverifiedQuoteT) error {
 }
 
 // DeleteUnverifiedQuote deletes an unverified quote
-func DeleteUnverifiedQuote(ID int) error {
+func DeleteUnverifiedQuote(ID uint32) error {
 	if database == nil {
 		return errors.New("DeleteUnverifiedQuote: not connected to database")
 	}
