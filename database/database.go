@@ -50,12 +50,6 @@ func SetupDatabase() {
 	}
 }
 
-// ExecuteQuery runs a query on the database and returns the error
-func ExecuteQuery(query string) error {
-	_, err := database.Exec(query)
-	return err
-}
-
 // StoreQuote is a function to store quotes
 func StoreQuote(quote string, teacherid int) error {
 	database.Ping()
