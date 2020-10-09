@@ -317,11 +317,11 @@ func UpdateQuote(q QuoteT) error {
 	// try to find corresponding entry in cache and overwrite it
 	err = unsafeOverwriteQuoteInCache(q)
 	if err != nil {
-		// is this code is executed
+		// if this code is executed
 		// database was updated successfully but quote cannot be found in cache
 		// thus cache and database are out of sync
-		// because of the database being the only source of truth, UpdateQuote() should not fail
-		// but the cache will be reloaded
+		// because the database is the only source of truth, UpdateQuote() should not fail,
+		// so the cache will be reloaded
 
 		log.Panic("UpdateQuote: unsafeOverwriteQuoteInCache returned: " + err.Error())
 		log.Panic("Cache is out of sync with database, trying to reload")
@@ -431,13 +431,13 @@ func UpdateTeacher(t TeacherT) error {
 	// try to find corresponding entry in cache and overwrite it
 	err = unsafeOverwriteTeacherInCache(t)
 	if err != nil {
-		// is this code is executed
+		// if this code is executed
 		// database was updated successfully but quote cannot be found in cache
 		// thus cache and database are out of sync
-		// because of the database being the only source of truth, UpdateQuote() should not fail
-		// but the cache will be reloaded
+		// because the database is the only source of truth, UpdateTeacher() should not fail,
+		// so the cache will be reloaded
 
-		log.Panic("UpdateQuote: unsafeOverwriteTeacherInCache returned: " + err.Error())
+		log.Panic("UpdateTeacher: unsafeOverwriteTeacherInCache returned: " + err.Error())
 		log.Panic("Cache is out of sync with database, trying to reload")
 		go Initialize()
 	}
@@ -531,7 +531,7 @@ func CreateUnverifiedQuote(q UnverifiedQuoteT) error {
 // UpdateUnverifiedQuote updates an unverified quote
 func UpdateUnverifiedQuote(q UnverifiedQuoteT) error {
 	if database == nil {
-		return errors.New("DeleteUnverifiedQuote: not connected to database")
+		return errors.New("UpdateUnverifiedQuote: not connected to database")
 	}
 
 	globalMutex.MinorLock()
@@ -541,7 +541,7 @@ func UpdateUnverifiedQuote(q UnverifiedQuoteT) error {
 	err := database.Ping()
 	if err != nil {
 		database.Close()
-		return errors.New("UpdateTeacher: pinging database failed: " + err.Error())
+		return errors.New("UpdateUnverifiedQuote: pinging database failed: " + err.Error())
 	}
 
 	// try to find corresponding entry database and overwrite it
@@ -572,7 +572,7 @@ func DeleteUnverifiedQuote(ID uint32) error {
 	err := database.Ping()
 	if err != nil {
 		database.Close()
-		return errors.New("UpdateTeacher: pinging database failed: " + err.Error())
+		return errors.New("DeleteUnverifiedQuote: pinging database failed: " + err.Error())
 	}
 
 	// try to find corresponding entry in database and delete it
