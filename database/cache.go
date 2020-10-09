@@ -212,6 +212,40 @@ func unsafeOverwriteQuoteInCache(q QuoteT) error {
 	return nil
 }
 
+func unsafeDeleteTeacherFromCache(ID uint32) error {
+	quotes := *unsafeGetQuotesFromCache()
+	for _, q := range quotes {
+		if q.TeacherID == ID {
+			log.Print(q)
+			err := unsafeDeleteQuoteFromCache(q.QuoteID)
+			if err != nil {
+				return errors.New("unsafeDeleteTeacherFromCache: could not delete quote from cache: " + err.Error())
+			}
+		} else {
+			log.Print(q.TeacherID)
+		}
+	}
+
+	notDeleted := true
+	for i, t := range cache.teacherSlice {
+		if t.TeacherID == ID {
+			iMax := int32(len(cache.teacherSlice) - 1)
+			cache.teacherSlice[i] = cache.teacherSlice[iMax]
+			cache.teacherSlice[iMax] = TeacherT{}
+			cache.teacherSlice = cache.teacherSlice[:iMax]
+			notDeleted = false
+			break
+		}
+	}
+
+	if notDeleted {
+		return errors.New("unsafeDeleteTeacherFromCache: could not find entry to delete")
+	}
+
+	return nil
+
+}
+
 func unsafeDeleteQuoteFromCache(ID uint32) error {
 	var enumIDRemove int32 = -1
 	var enumIDReplace int32 = -1
