@@ -286,14 +286,14 @@ func UpdateQuote(q QuoteT) error {
 		return errors.New("UpdateQuote: not connected to database")
 	}
 
-	globalMutex.MajorLock()
-	defer globalMutex.MajorUnlock()
-
 	var err error
 
 	if q.QuoteID == 0 {
 		return errors.New("UpdateQuote: QuoteID is zero")
 	}
+
+	globalMutex.MajorLock()
+	defer globalMutex.MajorUnlock()
 
 	// Verify connection to database
 	err = database.Ping()
@@ -302,7 +302,7 @@ func UpdateQuote(q QuoteT) error {
 		return errors.New("UpdateQuote: pinging database failed: " + err.Error())
 	}
 
-	// try to find corresponding entry database and overwrite it
+	// try to find corresponding entry in database and overwrite it
 	var res sql.Result
 	res, err = database.Exec(
 		`UPDATE quotes SET TeacherID=$2, Context=$3, Text=$4, Unixtime=$5, Upvotes=$6 WHERE QuoteID=$1`,
@@ -400,14 +400,14 @@ func UpdateTeacher(t TeacherT) error {
 		return errors.New("UpdateTeacher: not connected to database")
 	}
 
-	globalMutex.MajorLock()
-	defer globalMutex.MajorUnlock()
-
 	var err error
 
 	if t.TeacherID == 0 {
 		return errors.New("UpdateTeacher: TeacherID is zero")
 	}
+
+	globalMutex.MajorLock()
+	defer globalMutex.MajorUnlock()
 
 	// Verify connection to database
 	err = database.Ping()
@@ -416,7 +416,7 @@ func UpdateTeacher(t TeacherT) error {
 		return errors.New("UpdateTeacher: pinging database failed: " + err.Error())
 	}
 
-	// try to find corresponding entry database and overwrite it
+	// try to find corresponding entry in database and overwrite it
 	var res sql.Result
 	res, err = database.Exec(
 		`UPDATE teachers SET Name=$2, Title=$3, Note=$4 WHERE TeacherID=$1`,
