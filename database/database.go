@@ -338,8 +338,46 @@ func DeleteQuote(ID uint32) error {
 		return errors.New("DeleteQuote: not connected to database")
 	}
 
+	var err error
+
+	if ID == 0 {
+		return errors.New("DeleteQuote: ID is zero")
+	}
+
 	globalMutex.MajorLock()
 	defer globalMutex.MajorUnlock()
+
+	// Verify connection to database
+	err = database.Ping()
+	if err != nil {
+		database.Close()
+		return errors.New("DeleteQuote: pinging database failed: " + err.Error())
+	}
+
+	// try to find corresponding entry in database and delete it
+	var res sql.Result
+	res, err = database.Exec(
+		`DELETE FROM quotes WHERE QuoteID=$1`, ID)
+	if err != nil {
+		return errors.New("DeleteQuote: deleting quote from database failed: " + err.Error())
+	}
+	if rowsAffected, _ := res.RowsAffected(); rowsAffected == 0 {
+		return errors.New("UpdateQuote: could not find specified database row for deleting")
+	}
+
+	// try to find corresponding entry in cache and overwrite it
+	err = unsafeDeleteQuoteFromCache(ID)
+	if err != nil {
+		// if this code is executed
+		// database was updated successfully but quote cannot be found in cache
+		// thus cache and database are out of sync
+		// because the database is the only source of truth, UpdateQuote() should not fail,
+		// so the cache will be reloaded
+
+		log.Panic("DeleteQuote: unsafeDeleteQuoteFromCache returned: " + err.Error())
+		log.Panic("Cache is out of sync with database, trying to reload")
+		go Initialize()
+	}
 
 	return nil
 }
