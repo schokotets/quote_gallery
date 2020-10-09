@@ -276,18 +276,21 @@ func unsafeDeleteQuoteFromCache(ID uint32) error {
 }
 
 func unsafeGetQuotesFromCache() *[]QuoteT {
-	quoteSlice := cache.quoteSlice
+	quoteSlice := make([]QuoteT, len(cache.quoteSlice))
+	copy(quoteSlice, cache.quoteSlice)
 	return &quoteSlice
 }
 
 func unsafeGetTeachersFromCache() *[]TeacherT {
-	teacherSlice := cache.teacherSlice
-
+	teacherSlice := make([]TeacherT, len(cache.teacherSlice))
+	copy(teacherSlice, cache.teacherSlice)
 	return &teacherSlice
 }
 
 func unsafeGetQuotesByStringFromCache(text string) *[]QuoteT {
-	quoteSlice := cache.quoteSlice
+
+	quoteSlice := make([]QuoteT, len(cache.quoteSlice))
+	copy(quoteSlice, cache.quoteSlice)
 
 	for word, count := range getWordsFromString(text) {
 		wordsMapItem := cache.wordsMap[word]
