@@ -1,127 +1,586 @@
-// Create docker instance with postgres databasemanager inside
-// sudo docker run --name some-postgres -e POSTGRES_PASSWORD=1234 -e POSTGRES_DB=quote_gallery -p 0.0.0.0:5432:5432 -d postgres
-
 package database
 
 import (
 	"database/sql"
+	"errors"
 	"log"
 
 	// loading postgresql driver
 	_ "github.com/lib/pq"
 )
 
-// Teacher struct
-type Teacher struct {
-	ID    int
-	Name  string
-	Title string
-	Note  string
+/* -------------------------------------------------------------------------- */
+/*                                 DEFINITIONS                                */
+/* -------------------------------------------------------------------------- */
+
+// QuoteT stores one quote
+// QuoteID    the unique identificator of the quote
+// TeacherID  the unique identifier of the corresponding teacher
+// Context    the context of the quote
+// Text       the text of the quote itself
+// Unixtime   optional
+// Upvotes    optional
+//
+// match  	  only locally, not safed in database!
+//			  used by GetQuotesFromString to quantify how well this quote fits the string
+type QuoteT struct {
+	QuoteID   uint32
+	TeacherID uint32
+	Context   string
+	Text      string
+	Unixtime  uint64
+	Upvotes   uint32
+	Match     float32
 }
 
-// Quote struct
-type Quote struct {
-	ID      int
-	Teacher Teacher
-	Text    string
+// UnverifiedQuoteT stores one unverified quote
+// QuoteID      the unique identificator of the unverified quote
+// TeacherID    the unique identifier of the corresponding teacher
+// TeacherName  the name of the teacher if no TeacherID is given (e.g. new teacher)
+// Context      the context of the quote
+// Text         the text of the quote itself
+// Unixtime     optional
+// IPHash       optional
+type UnverifiedQuoteT struct {
+	QuoteID     uint32
+	TeacherID   uint32
+	TeacherName string
+	Context     string
+	Text        string
+	Unixtime    uint64
+	IPHash      uint64
 }
 
+// TeacherT stores one teacher
+// TeacherID  the unique identifier of the teacher
+// Name       the teacher's name
+// Title      the teacher's title
+// Note       optional notes, e.g. subjects
+type TeacherT struct {
+	TeacherID uint32
+	Name      string
+	Title     string
+	Note      string
+}
+
+type wordsMapT struct {
+	totalOccurences uint32
+	occurenceSlice  []occurenceSliceT
+}
+
+type occurenceSliceT struct {
+	enumID int32
+	count  uint32
+}
+
+/* -------------------------------------------------------------------------- */
+/*                          GLOBAL PACKAGE VARIABLES                          */
+/* -------------------------------------------------------------------------- */
+
+// Handle to the database, used as long time storage
 var database *sql.DB
 
-// SetupDatabase is a function to setup the database
-func SetupDatabase() {
+// globalMutex is to be used if a function of the database package must assure that every other
+// function is blocked
+var globalMutex Mutex = Mutex{0, 0, false}
+
+/* -------------------------------------------------------------------------- */
+/*                         EXPORTED GENERAL FUNCTIONS                         */
+/* -------------------------------------------------------------------------- */
+
+// Connect establishes the connection to the PostgresSQL database and therefore
+// needs to be called before any other function of database.go
+//
+// Notice: Connect doesn't initialize any tables or the cache, hence Initialize should be called
+// right afterwards.
+func Connect() error {
+	globalMutex.MajorLock()
+	defer globalMutex.MajorUnlock()
+
 	var err error
 
-	database, err = sql.Open("postgres", "user=postgres password=1234 dbname=quote_gallery sslmode=disable")
-	if err != nil {
-		log.Fatal("Cannot open Database: ", err)
-	}
-
-	_, err = database.Exec("CREATE TABLE IF NOT EXISTS teachers (id serial PRIMARY KEY, name varchar, note varchar, title varchar)")
-	if err != nil {
+	if database != nil {
 		database.Close()
-		log.Fatal("Cannot create teachers table: ", err)
+		database = nil
 	}
 
-	_, err = database.Exec("CREATE TABLE IF NOT EXISTS quotes (id serial PRIMARY KEY, teacherid integer REFERENCES teachers (id), text varchar)")
+	database, err = sql.Open(
+		"postgres",
+		`user=postgres 
+		password=1234 
+		dbname=quote_gallery 
+		sslmode=disable`)
 	if err != nil {
-		database.Close()
-		log.Fatal("Cannot create quotes table: ", err)
-	}
-}
-
-// StoreQuote is a function to store quotes
-func StoreQuote(quote string, teacherid int) error {
-	database.Ping()
-
-	_, err := database.Exec("INSERT INTO quotes (teacherid, text) VALUES ($1, $2)", teacherid, quote)
-	if err != nil {
-		log.Print("Cannot store quote: ", err)
-		return err
+		return errors.New("Connect: connecting to database failed: " + err.Error())
 	}
 
 	return nil
 }
 
-// StoreTeacher is a function to store teachers
-func StoreTeacher(name string, title string, note string) error {
-	database.Ping()
+// Initialize creates all the required tables in database, if they don't already exist
+// and initializes the cache from the database.
+//
+// Therefore it must be called before any other function of database.go despite Connect, which
+// needs to been have called for Initialize to work
+func Initialize() error {
+	if database == nil {
+		return errors.New("Initialize: not connected to database")
+	}
 
-	_, err := database.Exec("INSERT INTO teachers (name, title, note) VALUES ($1, $2, $3)", name, title, note)
+	globalMutex.MajorLock()
+	defer globalMutex.MajorUnlock()
+
+	// Verify connection to database
+	err := database.Ping()
 	if err != nil {
-		log.Print("Cannot store teacher: ", err)
-		return err
+		database.Close()
+		return errors.New("Initialize: pinging database failed: " + err.Error())
+	}
+
+	// Create teachers table in database if it doesn't exist
+	// for more information see TeachersT declaration
+	_, err = database.Exec(
+		`CREATE TABLE IF NOT EXISTS teachers (
+		TeacherID serial PRIMARY KEY, 
+		Name varchar, 
+		Title varchar, 
+		Note varchar)`)
+	if err != nil {
+		database.Close()
+		return errors.New("Initialize: creating teachers table failed: " + err.Error())
+	}
+
+	// Create quotes table in database if it doesn't exist
+	// for more information see QuoteT declaration
+	_, err = database.Exec(
+		`CREATE TABLE IF NOT EXISTS quotes (
+		QuoteID serial PRIMARY KEY,
+		TeacherID integer REFERENCES teachers (TeacherID), 
+		Context varchar,
+		Text varchar,
+		Unixtime bigint,
+		Upvotes integer)`)
+	if err != nil {
+		database.Close()
+		return errors.New("Initialize: creating quotes table failed: " + err.Error())
+	}
+
+	// Create unverifiedQuotes table in database if it doesn't exist
+	// for more information see UnverifiedQuoteT declaration
+	_, err = database.Exec(
+		`CREATE TABLE IF NOT EXISTS unverifiedQuotes (
+		QuoteID serial PRIMARY KEY,
+		TeacherID integer, 
+		TeacherName varchar, 
+		Context varchar,
+		Text varchar,
+		Unixtime bigint,
+		IPHash bigint)`)
+	if err != nil {
+		database.Close()
+		return errors.New("Initialize: creating unverifiedQuotes table failed: " + err.Error())
+	}
+
+	unsafeLoadCache()
+
+	return nil
+
+}
+
+// CloseAndClearCache closes database and cache
+func CloseAndClearCache() error {
+	if database == nil {
+		return errors.New("CloseAndClearCache: not connected to database")
+	}
+
+	globalMutex.MajorLock()
+	defer globalMutex.MajorUnlock()
+
+	database.Close()
+	unsafeClearCache()
+
+	return nil
+}
+
+// ExecuteQuery runs a query on the database and returns the error
+// This function is to be used in a testing environment
+func ExecuteQuery(query string) error {
+	if database == nil {
+		return errors.New("ExecuteQuery: not connected to database")
+	}
+
+	globalMutex.MajorLock()
+	defer globalMutex.MajorUnlock()
+
+	_, err := database.Exec(query)
+	return err
+}
+
+/* -------------------------------------------------------------------------- */
+/*                          EXPORTED QUOTES FUNCTIONS                         */
+/* -------------------------------------------------------------------------- */
+
+// GetQuotes returns a slice containing all quotes
+// The weight variable will be zero
+func GetQuotes() (*[]QuoteT, error) {
+	if database == nil {
+		return nil, errors.New("GetQuotes: not connected to database")
+	}
+
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
+
+	// get quotes from cache
+	return unsafeGetQuotesFromCache(), nil
+}
+
+// GetQuotesByString returns a slice containing all quotes
+// The weight variable will indicate how well the given text matches the corresponding quote
+func GetQuotesByString(text string) (*[]QuoteT, error) {
+	if database == nil {
+		return nil, errors.New("GetQuotesByString: not connected to database")
+	}
+
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
+
+	// get weighted quotes from cache
+	return unsafeGetQuotesByStringFromCache(text), nil
+}
+
+// CreateQuote creates a new quote
+func CreateQuote(q QuoteT) error {
+	if database == nil {
+		return errors.New("CreateQuote: not connected to database")
+	}
+
+	globalMutex.MajorLock()
+	defer globalMutex.MajorUnlock()
+
+	var err error
+
+	// Verify connection to database
+	err = database.Ping()
+	if err != nil {
+		database.Close()
+		return errors.New("CreateQuote: pinging database failed: " + err.Error())
+	}
+
+	// add quote to database
+	err = database.QueryRow(
+		`INSERT INTO quotes (TeacherID, Context, Text, Unixtime, Upvotes) VALUES ($1, $2, $3, $4, $5) RETURNING QuoteID`,
+		q.TeacherID, q.Context, q.Text, q.Unixtime, q.Upvotes).Scan(&q.QuoteID)
+	if err != nil {
+		return errors.New("CreateQuote: inserting quote into database failed: " + err.Error())
+	}
+
+	// add quote to cache
+	unsafeAddQuoteToCache(q)
+
+	return nil
+}
+
+// UpdateQuote updates an existing quote by given QuoteID
+func UpdateQuote(q QuoteT) error {
+	if database == nil {
+		return errors.New("UpdateQuote: not connected to database")
+	}
+
+	globalMutex.MajorLock()
+	defer globalMutex.MajorUnlock()
+
+	var err error
+
+	if q.QuoteID == 0 {
+		return errors.New("UpdateQuote: QuoteID is zero")
+	}
+
+	// Verify connection to database
+	err = database.Ping()
+	if err != nil {
+		database.Close()
+		return errors.New("UpdateQuote: pinging database failed: " + err.Error())
+	}
+
+	// try to find corresponding entry database and overwrite it
+	var res sql.Result
+	res, err = database.Exec(
+		`UPDATE quotes SET TeacherID=$2, Context=$3, Text=$4, Unixtime=$5, Upvotes=$6 WHERE QuoteID=$1`,
+		q.QuoteID, q.TeacherID, q.Context, q.Text, q.Unixtime, q.Upvotes)
+	if err != nil {
+		return errors.New("UpdateQuote: updating quote in database failed: " + err.Error())
+	}
+	if rowsAffected, _ := res.RowsAffected(); rowsAffected == 0 {
+		return errors.New("UpdateQuote: could not find specified database row for updating")
+	}
+
+	// try to find corresponding entry in cache and overwrite it
+	err = unsafeOverwriteQuoteInCache(q)
+	if err != nil {
+		// if this code is executed
+		// database was updated successfully but quote cannot be found in cache
+		// thus cache and database are out of sync
+		// because the database is the only source of truth, UpdateQuote() should not fail,
+		// so the cache will be reloaded
+
+		log.Panic("UpdateQuote: unsafeOverwriteQuoteInCache returned: " + err.Error())
+		log.Panic("Cache is out of sync with database, trying to reload")
+		go Initialize()
 	}
 
 	return nil
 }
 
-// GetTeachers is a function to get teachers from the database
-func GetTeachers() ([]Teacher, error) {
-
-	rows, err := database.Query("SELECT id,name,note,title FROM teachers")
-	defer rows.Close()
-
-	if err != nil {
-		log.Print("Cannot get teachers: ", err)
-		return nil, err
+// DeleteQuote deletes the quote corresponding to the given ID from the database and the quotes slice
+// It will also modifiy the words map
+func DeleteQuote(ID uint32) error {
+	if database == nil {
+		return errors.New("DeleteQuote: not connected to database")
 	}
 
-	var teachers []Teacher
+	globalMutex.MajorLock()
+	defer globalMutex.MajorUnlock()
 
-	for rows.Next() {
-		t := Teacher{}
-		rows.Scan(&t.ID, &t.Name, &t.Note, &t.Title)
-
-		teachers = append(teachers, t)
-	}
-
-	return teachers, nil
+	return nil
 }
 
-// GetQuotes is a function to get quotes from the database
-func GetQuotes() ([]Quote, error) {
+/* -------------------------------------------------------------------------- */
+/*                         EXPORTED TEACHERS FUNCTIONS                        */
+/* -------------------------------------------------------------------------- */
 
-	rows, err := database.Query("SELECT quotes.id, quotes.text, teachers.id, teachers.name, teachers.title, teachers.note FROM quotes INNER JOIN teachers ON quotes.teacherid = teachers.id")
-	defer rows.Close()
-
-	if err != nil {
-		log.Print("Cannot get quotes: ", err)
-		return nil, err
+// GetTeachers returns a slice containing all teachers
+// The returned slice is not sorted
+func GetTeachers() (*[]TeacherT, error) {
+	if database == nil {
+		return nil, errors.New("GetTeachers: not connected to database")
 	}
 
-	var quotes []Quote
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
 
+	// get teachers from cache
+	return unsafeGetTeachersFromCache(), nil
+}
+
+// CreateTeacher creates a new teacher
+func CreateTeacher(t TeacherT) error {
+	if database == nil {
+		return errors.New("CreateTeacher: not connected to database")
+	}
+
+	globalMutex.MajorLock()
+	defer globalMutex.MajorUnlock()
+
+	var err error
+
+	// Verify connection to database
+	err = database.Ping()
+	if err != nil {
+		database.Close()
+		return errors.New("CreateTeacher: pinging database failed: " + err.Error())
+	}
+
+	// add teacher to database
+	err = database.QueryRow(
+		`INSERT INTO teachers (Name, Title, Note) VALUES ($1, $2, $3) RETURNING TeacherID`,
+		t.Name, t.Title, t.Note).Scan(&t.TeacherID)
+	if err != nil {
+		return errors.New("CreateTeacher: inserting teacher into database failed: " + err.Error())
+	}
+
+	// add teacher to cache
+	unsafeAddTeacherToCache(t)
+
+	return nil
+}
+
+// UpdateTeacher updates a teacher by given TeacherID
+func UpdateTeacher(t TeacherT) error {
+	if database == nil {
+		return errors.New("UpdateTeacher: not connected to database")
+	}
+
+	globalMutex.MajorLock()
+	defer globalMutex.MajorUnlock()
+
+	var err error
+
+	if t.TeacherID == 0 {
+		return errors.New("UpdateTeacher: TeacherID is zero")
+	}
+
+	// Verify connection to database
+	err = database.Ping()
+	if err != nil {
+		database.Close()
+		return errors.New("UpdateTeacher: pinging database failed: " + err.Error())
+	}
+
+	// try to find corresponding entry database and overwrite it
+	var res sql.Result
+	res, err = database.Exec(
+		`UPDATE teachers SET Name=$2, Title=$3, Note=$4 WHERE TeacherID=$1`,
+		t.TeacherID, t.Name, t.Title, t.Note)
+	if err != nil {
+		return errors.New("UpdateTeacher: updating teacher in database failed: " + err.Error())
+	}
+	if rowsAffected, _ := res.RowsAffected(); rowsAffected == 0 {
+		return errors.New("UpdateTeacher: could not find specified database row for updating")
+	}
+
+	// try to find corresponding entry in cache and overwrite it
+	err = unsafeOverwriteTeacherInCache(t)
+	if err != nil {
+		// if this code is executed
+		// database was updated successfully but quote cannot be found in cache
+		// thus cache and database are out of sync
+		// because the database is the only source of truth, UpdateTeacher() should not fail,
+		// so the cache will be reloaded
+
+		log.Panic("UpdateTeacher: unsafeOverwriteTeacherInCache returned: " + err.Error())
+		log.Panic("Cache is out of sync with database, trying to reload")
+		go Initialize()
+	}
+
+	return nil
+}
+
+// DeleteTeacher deletes the teacher corresponding to the given ID from the database and the teachers slice
+// It will delete all corresponding quotes
+func DeleteTeacher() error {
+	if database == nil {
+		return errors.New("DeleteTeacher: not connected to database")
+	}
+
+	globalMutex.MajorLock()
+	defer globalMutex.MajorUnlock()
+
+	return nil
+}
+
+/* -------------------------------------------------------------------------- */
+/*                    EXPORTED UNVERIFIED QUOTES FUNCTIONS                    */
+/* -------------------------------------------------------------------------- */
+
+// GetUnverifiedQuotes returns a slice containing all unverified quotes
+func GetUnverifiedQuotes() (*[]UnverifiedQuoteT, error) {
+	if database == nil {
+		return nil, errors.New("GetUnverifiedQuotes: not connected to database")
+	}
+
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
+
+	// get all unverifiedQuotes from database
+	rows, err := database.Query(`SELECT
+		QuoteID,
+		TeacherID, 
+		TeacherName, 
+		Context,
+		Text,
+		Unixtime,
+		IPHash FROM unverifiedQuotes`)
+	if err != nil {
+		return nil, errors.New("GetUnverifiedQuotes: loading teachers from database failed: " + err.Error())
+	}
+
+	var quotes []UnverifiedQuoteT
+
+	// Iterate over all unverifiedQuotes from database
 	for rows.Next() {
-		q := Quote{}
-		rows.Scan(&q.ID, &q.Text, &q.Teacher.ID, &q.Teacher.Name, &q.Teacher.Title, &q.Teacher.Note)
+		// Get unverifiedQuotes data
+		var q UnverifiedQuoteT
+		rows.Scan(&q.QuoteID, &q.TeacherID, &q.TeacherName, &q.Context, &q.Text, &q.Unixtime, &q.IPHash)
+
+		// Add unverifiedQuote to return slice
 		quotes = append(quotes, q)
 	}
 
-	return quotes, nil
+	return &quotes, nil
 }
 
-// CloseDatabase is a function to close the database
-func CloseDatabase() {
-	database.Close()
+// CreateUnverifiedQuote stores an unverified quote
+func CreateUnverifiedQuote(q UnverifiedQuoteT) error {
+	if database == nil {
+		return errors.New("CreateUnverifiedQuote: not connected to database")
+	}
+
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
+
+	var err error
+
+	// Verify connection to database
+	err = database.Ping()
+	if err != nil {
+		database.Close()
+		return errors.New("CreateUnverifiedQuote: pinging database failed: " + err.Error())
+	}
+
+	// add quote to database
+	_, err = database.Exec(
+		`INSERT INTO unverifiedQuotes (TeacherID, TeacherName, Context, Text, Unixtime, IPHash) VALUES ($1, $2, $3, $4, $5, $6)`,
+		q.TeacherID, q.TeacherName, q.Context, q.Text, q.Unixtime, q.IPHash)
+	if err != nil {
+		return errors.New("CreateUnverifiedQuote: inserting quote into database failed: " + err.Error())
+	}
+
+	return nil
+}
+
+// UpdateUnverifiedQuote updates an unverified quote
+func UpdateUnverifiedQuote(q UnverifiedQuoteT) error {
+	if database == nil {
+		return errors.New("UpdateUnverifiedQuote: not connected to database")
+	}
+
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
+
+	// Verify connection to database
+	err := database.Ping()
+	if err != nil {
+		database.Close()
+		return errors.New("UpdateUnverifiedQuote: pinging database failed: " + err.Error())
+	}
+
+	// try to find corresponding entry database and overwrite it
+	var res sql.Result
+	res, err = database.Exec(
+		`UPDATE unverifiedQuotes SET TeacherID=$2, TeacherName=$3, Context=$4, Text=$5, Unixtime=$6, IPHash=$7 WHERE  QuoteID=$1`,
+		q.QuoteID, q.TeacherID, q.TeacherName, q.Context, q.Text, q.Unixtime, q.IPHash)
+	if err != nil {
+		return errors.New("UpdateUnverifiedQuote: updating unverifiedQuote in database failed: " + err.Error())
+	}
+	if rowsAffected, _ := res.RowsAffected(); rowsAffected == 0 {
+		return errors.New("UpdateUnverifiedQuote: could not find specified database row for updating")
+	}
+
+	return nil
+}
+
+// DeleteUnverifiedQuote deletes an unverified quote
+func DeleteUnverifiedQuote(ID uint32) error {
+	if database == nil {
+		return errors.New("DeleteUnverifiedQuote: not connected to database")
+	}
+
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
+
+	// Verify connection to database
+	err := database.Ping()
+	if err != nil {
+		database.Close()
+		return errors.New("DeleteUnverifiedQuote: pinging database failed: " + err.Error())
+	}
+
+	// try to find corresponding entry in database and delete it
+	_, err = database.Exec(
+		`DELETE FROM unverifiedQuotes WHERE  QuoteID=$1`, ID)
+	if err != nil {
+		return errors.New("DeleteUnverifiedQuote: deleting unverifiedQuote from database failed: " + err.Error())
+	}
+
+	return nil
 }

@@ -15,11 +15,11 @@
 		<label for="contextfield">Kontext (Situation; optional):</label>
 		<input class="fullwidth" id="contextfield" name="text" type="text">
 		<br>
-		<label for="teacherfield">Lehrer*in:</label>
+		<label for="teacherfield">Lehrer:</label>
 		<select id="teacherfield" name="teacherid" required>
 			<option value="" selected disabled hidden></option>
 			{{range .}}
-			<option value="{{.ID}}">{{.Name}}, {{.Title}}{{if .Note}} ({{.Note}}){{end}}</option>
+			<option value="{{.TeacherID}}">{{.Name}}, {{.Title}}{{if .Note}} ({{.Note}}){{end}}</option>
 			{{end}}
 		</select>
 		<br>
