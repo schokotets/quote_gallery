@@ -212,6 +212,69 @@ func unsafeOverwriteQuoteInCache(q QuoteT) error {
 	return nil
 }
 
+func unsafeDeleteQuoteFromCache(ID uint32) error {
+	var enumIDRemove int32 = -1
+	var enumIDReplace int32 = -1
+
+	for i, v := range cache.quoteSlice {
+		if v.QuoteID == ID {
+			enumIDReplace = int32(len(cache.quoteSlice) - 1)
+			cache.quoteSlice[i] = cache.quoteSlice[enumIDReplace]
+			cache.quoteSlice[enumIDReplace] = QuoteT{}
+			cache.quoteSlice = cache.quoteSlice[:enumIDReplace]
+			enumIDRemove = int32(i)
+		}
+	}
+
+	if enumIDRemove < 0 {
+		return errors.New("unsafeDeleteQuoteFromCache: could not find specified entry to delete")
+	}
+
+	for word, wordsMapItem := range cache.wordsMap {
+		iMax := len(wordsMapItem.occurenceSlice) - 1
+		if iMax < 0 {
+			// occurenceSlice is empty, i.e. there are no occurences of word
+			// this should not happen, but if it does, word can be removed from wordsMapItem
+			delete(cache.wordsMap, word)
+			continue
+		}
+
+		// Iterate through occurenceSlice
+		indexRemove := -1
+		indexReplace := -1
+		for i, v := range wordsMapItem.occurenceSlice {
+			if v.enumID == enumIDRemove {
+				// found entry, which should be removed
+				indexRemove = i
+			}
+
+			if v.enumID == enumIDReplace {
+				// found entry, whose enumID needs to be replaced
+				indexReplace = i
+			}
+		}
+
+		if indexReplace >= 0 {
+			wordsMapItem.occurenceSlice[indexReplace].enumID = enumIDRemove
+		}
+
+		if indexRemove >= 0 {
+			wordsMapItem.totalOccurences -= wordsMapItem.occurenceSlice[indexRemove].count
+			wordsMapItem.occurenceSlice[indexRemove] = wordsMapItem.occurenceSlice[iMax]
+			wordsMapItem.occurenceSlice[iMax] = occurenceSliceT{5, 5}
+			wordsMapItem.occurenceSlice = wordsMapItem.occurenceSlice[:iMax]
+		}
+
+		cache.wordsMap[word] = wordsMapItem
+
+		if len(wordsMapItem.occurenceSlice) == 0 {
+			delete(cache.wordsMap, word)
+		}
+	}
+
+	return nil
+}
+
 func unsafeGetQuotesFromCache() *[]QuoteT {
 	quoteSlice := cache.quoteSlice
 	return &quoteSlice
