@@ -14,15 +14,15 @@ import (
 /* -------------------------------------------------------------------------- */
 
 // QuoteT stores one quote
-// QuoteID    the unique identificator of the quote
-// TeacherID  the unique identifier of the corresponding teacher
+// QuoteID    the unique ID of the quote
+// TeacherID  the unique ID of the corresponding teacher
 // Context    the context of the quote
 // Text       the text of the quote itself
-// Unixtime   optional
+// Unixtime   the time of submission; optional
 // Upvotes    optional
 //
-// match  	  only locally, not safed in database!
-//			  used by GetQuotesFromString to quantify how well this quote fits the string
+// Match      exists only locally, not saved in database!
+//              (used by GetQuotesFromString to quantify how well this quote fits the string)
 type QuoteT struct {
 	QuoteID   uint32
 	TeacherID uint32
@@ -34,12 +34,12 @@ type QuoteT struct {
 }
 
 // UnverifiedQuoteT stores one unverified quote
-// QuoteID      the unique identificator of the unverified quote
-// TeacherID    the unique identifier of the corresponding teacher
+// QuoteID      the unique ID of the unverified quote
+// TeacherID    the unique ID of the corresponding teacher
 // TeacherName  the name of the teacher if no TeacherID is given (e.g. new teacher)
 // Context      the context of the quote
 // Text         the text of the quote itself
-// Unixtime     optional
+// Unixtime     the time of submission; optional
 // IPHash       optional
 type UnverifiedQuoteT struct {
 	QuoteID     uint32
