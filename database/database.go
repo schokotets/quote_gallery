@@ -155,7 +155,7 @@ func Initialize() error {
 	_, err = database.Exec(
 		`CREATE TABLE IF NOT EXISTS quotes (
 		QuoteID serial PRIMARY KEY,
-		TeacherID integer REFERENCES teachers (TeacherID), 
+		TeacherID integer REFERENCES teachers (TeacherID) ON DELETE CASCADE, 
 		Context varchar,
 		Text varchar,
 		Unixtime bigint,
@@ -485,13 +485,51 @@ func UpdateTeacher(t TeacherT) error {
 
 // DeleteTeacher deletes the teacher corresponding to the given ID from the database and the teachers slice
 // It will delete all corresponding quotes
-func DeleteTeacher() error {
+func DeleteTeacher(ID uint32) error {
 	if database == nil {
 		return errors.New("DeleteTeacher: not connected to database")
 	}
 
+	var err error
+
+	if ID == 0 {
+		return errors.New("DeleteTeacher: ID is zero")
+	}
+
 	globalMutex.MajorLock()
 	defer globalMutex.MajorUnlock()
+
+	// Verify connection to database
+	err = database.Ping()
+	if err != nil {
+		database.Close()
+		return errors.New("DeleteTeacher: pinging database failed: " + err.Error())
+	}
+
+	// try to find corresponding entry in database and delete it
+	var res sql.Result
+	res, err = database.Exec(
+		`DELETE FROM teachers WHERE TeacherID=$1`, ID)
+	if err != nil {
+		return errors.New("DeleteTeacher: deleting teacher from database failed: " + err.Error())
+	}
+	if rowsAffected, _ := res.RowsAffected(); rowsAffected == 0 {
+		return errors.New("DeleteTeacher: could not find specified database row for deleting")
+	}
+
+	// try to find corresponding entry in cache and overwrite it
+	err = unsafeDeleteTeacherFromCache(ID)
+	if err != nil {
+		// if this code is executed
+		// database was updated successfully but teacher cannot be found in cache
+		// thus cache and database are out of sync
+		// because the database is the only source of truth, UpdateQuote() should not fail,
+		// so the cache will be reloaded
+
+		log.Panic("DeleteTeacher: unsafeDeleteTeacherFromCache returned: " + err.Error())
+		log.Panic("Cache is out of sync with database, trying to reload")
+		go Initialize()
+	}
 
 	return nil
 }
