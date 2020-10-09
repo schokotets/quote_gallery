@@ -6,6 +6,26 @@ import (
 )
 
 /* -------------------------------------------------------------------------- */
+/*                                 DEFINITIONS                                */
+/* -------------------------------------------------------------------------- */
+
+// wordsMapT stores all the necessary search information for one word
+// totalOccurences  number of occurences of this word in all quotes
+// occurenceSlice   stores the number of occurences of this word for every quote
+type wordsMapT struct {
+	totalOccurences uint32
+	occurenceSlice  []occurenceSliceT
+}
+
+// occurenceSliceT stores the number of occurences of one word for one quote
+// enumID  cache internal index of the quote
+// count   number of occurences
+type occurenceSliceT struct {
+	enumID int32
+	count  uint32
+}
+
+/* -------------------------------------------------------------------------- */
 /*                          GLOBAL PACKAGE VARIABLES                          */
 /* -------------------------------------------------------------------------- */
 

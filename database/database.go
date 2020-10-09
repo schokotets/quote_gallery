@@ -63,16 +63,6 @@ type TeacherT struct {
 	Note      string
 }
 
-type wordsMapT struct {
-	totalOccurences uint32
-	occurenceSlice  []occurenceSliceT
-}
-
-type occurenceSliceT struct {
-	enumID int32
-	count  uint32
-}
-
 /* -------------------------------------------------------------------------- */
 /*                          GLOBAL PACKAGE VARIABLES                          */
 /* -------------------------------------------------------------------------- */
