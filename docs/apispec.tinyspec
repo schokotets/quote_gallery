@@ -1,0 +1,113 @@
+// https://github.com/Ajaxy/tinyspec
+// https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+
+
+// This is a WIP HTTP JSON REST-like API specification.
+// It refers to the desired state by both frontend and backend.
+// Routes not implemented in the backend are marked with //TODO:
+//  - the //TODO: tag shall be removed once a route is created backend
+//    and adheres to the specification in this file.
+// What's not very relevant currently is below //later...
+
+
+// MODELS
+
+TeacherT {TeacherID?: i, Name: s, Title: s, Note: s}
+
+UnverifiedQuoteT {QuoteID: i, TeacherID?: i, TeacherName?: s, Context: s, Text: s, Unixtime i}
+QuoteSubmissionT {TeacherID?: i, TeacherName?: s, Context: s, Text: s} // either id or name shall be given
+QuoteT {QuoteID?: i, Context: s, Text: s, Unixtime: i, Upvotes: i}
+
+ErrorT {error: s}
+
+
+// USER ROUTES
+
+//TODO:
+// password-protected (http basic auth)
+
+// pages:
+//TODO:
+// /?sortby?=(teachername|time)&page?=i
+// /submit
+
+//TODO:
+POST /api/quotes/submit QuoteSubmissionT
+	=> {quotes: QuoteT[]}
+	=> 401 Unauthorized
+	=> 400 /*Bad Request*/ ErrorT
+	//..
+
+//later...
+
+//TODO:
+POST /api/quotes/upvote/:id
+	=> 200 OK
+	=> 401 Unauthorized
+	=> 404 Not Found
+	//..
+
+//TODO:
+POST /api/quotes/similar/
+	=> {quotes: QuoteT[]}
+	=> 204 No Content
+	=> 400 /*Bad Request*/ ErrorT
+	=> 401 Unauthorized
+	//..
+
+
+// ADMIN ROUTES
+
+//TODO:
+// password-protected (http basic auth)
+
+// pages:
+//TODO:
+// - /admin/quotes
+//TODO:
+// - later... /admin/teacher
+
+//edit
+//TODO:
+PATCH /api/unverifiedquotes/:id
+	=> UnverifiedQuoteTuser
+	=> 400 /*Bad Request*/ ErrorT
+	=> 401 Unauthorized
+	=> 404 Not Found
+	//..
+
+//TODO:
+DELETE /api/unverifiedquotes/:id
+	=> 200 OK
+	=> 404 Not Found
+	=> 401 Unauthorized
+	//..
+
+//TODO:
+PUT /api/unverifiedquotes/confirm/:id
+	=> 200 OK
+	=> 404 Not Found
+	=> 401 Unauthorized
+	//..
+
+//TODO:
+POST /api/teachers TeacherT //without id
+	=> 200 OK
+	=> 404 Not Found
+	=> 401 Unauthorized
+	//..
+
+//later...
+//TODO:
+DELETE /api/quotes/:id
+	=> 200 OK
+	=> 404 Not Found
+	=> 401 Unauthorized
+	//..
+
+//TODO:
+GET /api/unverifiedquotes/similar/:id
+	=> {quotes: QuoteT[]}
+	=> 404 Not Found
+	=> 401 Unauthorized
+	//..
