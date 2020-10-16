@@ -63,16 +63,6 @@ type TeacherT struct {
 	Note      string
 }
 
-type wordsMapT struct {
-	totalOccurences uint32
-	occurenceSlice  []occurenceSliceT
-}
-
-type occurenceSliceT struct {
-	enumID int32
-	count  uint32
-}
-
 /* -------------------------------------------------------------------------- */
 /*                          GLOBAL PACKAGE VARIABLES                          */
 /* -------------------------------------------------------------------------- */
@@ -155,7 +145,7 @@ func Initialize() error {
 	_, err = database.Exec(
 		`CREATE TABLE IF NOT EXISTS quotes (
 		QuoteID serial PRIMARY KEY,
-		TeacherID integer REFERENCES teachers (TeacherID), 
+		TeacherID integer REFERENCES teachers (TeacherID) ON DELETE CASCADE, 
 		Context varchar,
 		Text varchar,
 		Unixtime bigint,
@@ -286,14 +276,14 @@ func UpdateQuote(q QuoteT) error {
 		return errors.New("UpdateQuote: not connected to database")
 	}
 
-	globalMutex.MajorLock()
-	defer globalMutex.MajorUnlock()
-
 	var err error
 
 	if q.QuoteID == 0 {
 		return errors.New("UpdateQuote: QuoteID is zero")
 	}
+
+	globalMutex.MajorLock()
+	defer globalMutex.MajorUnlock()
 
 	// Verify connection to database
 	err = database.Ping()
@@ -302,7 +292,7 @@ func UpdateQuote(q QuoteT) error {
 		return errors.New("UpdateQuote: pinging database failed: " + err.Error())
 	}
 
-	// try to find corresponding entry database and overwrite it
+	// try to find corresponding entry in database and overwrite it
 	var res sql.Result
 	res, err = database.Exec(
 		`UPDATE quotes SET TeacherID=$2, Context=$3, Text=$4, Unixtime=$5, Upvotes=$6 WHERE QuoteID=$1`,
@@ -338,8 +328,46 @@ func DeleteQuote(ID uint32) error {
 		return errors.New("DeleteQuote: not connected to database")
 	}
 
+	var err error
+
+	if ID == 0 {
+		return errors.New("DeleteQuote: ID is zero")
+	}
+
 	globalMutex.MajorLock()
 	defer globalMutex.MajorUnlock()
+
+	// Verify connection to database
+	err = database.Ping()
+	if err != nil {
+		database.Close()
+		return errors.New("DeleteQuote: pinging database failed: " + err.Error())
+	}
+
+	// try to find corresponding entry in database and delete it
+	var res sql.Result
+	res, err = database.Exec(
+		`DELETE FROM quotes WHERE QuoteID=$1`, ID)
+	if err != nil {
+		return errors.New("DeleteQuote: deleting quote from database failed: " + err.Error())
+	}
+	if rowsAffected, _ := res.RowsAffected(); rowsAffected == 0 {
+		return errors.New("UpdateQuote: could not find specified database row for deleting")
+	}
+
+	// try to find corresponding entry in cache and overwrite it
+	err = unsafeDeleteQuoteFromCache(ID)
+	if err != nil {
+		// if this code is executed
+		// database was updated successfully but quote cannot be found in cache
+		// thus cache and database are out of sync
+		// because the database is the only source of truth, UpdateQuote() should not fail,
+		// so the cache will be reloaded
+
+		log.Panic("DeleteQuote: unsafeDeleteQuoteFromCache returned: " + err.Error())
+		log.Panic("Cache is out of sync with database, trying to reload")
+		go Initialize()
+	}
 
 	return nil
 }
@@ -400,14 +428,14 @@ func UpdateTeacher(t TeacherT) error {
 		return errors.New("UpdateTeacher: not connected to database")
 	}
 
-	globalMutex.MajorLock()
-	defer globalMutex.MajorUnlock()
-
 	var err error
 
 	if t.TeacherID == 0 {
 		return errors.New("UpdateTeacher: TeacherID is zero")
 	}
+
+	globalMutex.MajorLock()
+	defer globalMutex.MajorUnlock()
 
 	// Verify connection to database
 	err = database.Ping()
@@ -416,7 +444,7 @@ func UpdateTeacher(t TeacherT) error {
 		return errors.New("UpdateTeacher: pinging database failed: " + err.Error())
 	}
 
-	// try to find corresponding entry database and overwrite it
+	// try to find corresponding entry in database and overwrite it
 	var res sql.Result
 	res, err = database.Exec(
 		`UPDATE teachers SET Name=$2, Title=$3, Note=$4 WHERE TeacherID=$1`,
@@ -447,13 +475,51 @@ func UpdateTeacher(t TeacherT) error {
 
 // DeleteTeacher deletes the teacher corresponding to the given ID from the database and the teachers slice
 // It will delete all corresponding quotes
-func DeleteTeacher() error {
+func DeleteTeacher(ID uint32) error {
 	if database == nil {
 		return errors.New("DeleteTeacher: not connected to database")
 	}
 
+	var err error
+
+	if ID == 0 {
+		return errors.New("DeleteTeacher: ID is zero")
+	}
+
 	globalMutex.MajorLock()
 	defer globalMutex.MajorUnlock()
+
+	// Verify connection to database
+	err = database.Ping()
+	if err != nil {
+		database.Close()
+		return errors.New("DeleteTeacher: pinging database failed: " + err.Error())
+	}
+
+	// try to find corresponding entry in database and delete it
+	var res sql.Result
+	res, err = database.Exec(
+		`DELETE FROM teachers WHERE TeacherID=$1`, ID)
+	if err != nil {
+		return errors.New("DeleteTeacher: deleting teacher from database failed: " + err.Error())
+	}
+	if rowsAffected, _ := res.RowsAffected(); rowsAffected == 0 {
+		return errors.New("DeleteTeacher: could not find specified database row for deleting")
+	}
+
+	// try to find corresponding entry in cache and overwrite it
+	err = unsafeDeleteTeacherFromCache(ID)
+	if err != nil {
+		// if this code is executed
+		// database was updated successfully but teacher cannot be found in cache
+		// thus cache and database are out of sync
+		// because the database is the only source of truth, UpdateQuote() should not fail,
+		// so the cache will be reloaded
+
+		log.Panic("DeleteTeacher: unsafeDeleteTeacherFromCache returned: " + err.Error())
+		log.Panic("Cache is out of sync with database, trying to reload")
+		go Initialize()
+	}
 
 	return nil
 }
