@@ -12,11 +12,13 @@
 
 // MODELS
 
-TeacherT {TeacherID?: i, Name: s, Title: s, Note: s}
+TeacherT {TeacherID: i, Name: s, Title: s, Note: s}
+TeacherSubmissionT {Name: s, Title: s, Note: s}
 
-UnverifiedQuoteT {QuoteID: i, TeacherID?: i, TeacherName?: s, Context: s, Text: s, Unixtime i}
-QuoteSubmissionT {TeacherID?: i, TeacherName?: s, Context: s, Text: s} // either id or name shall be given
-QuoteT {QuoteID?: i, Context: s, Text: s, Unixtime: i, Upvotes: i}
+UnverifiedQuoteT {QuoteID: i, Teacher: i|s, Context: s, Text: s, Unixtime i}
+QuoteSubmissionT {Teacher: i|s, Context: s, Text: s}
+QuoteChangeT {Teacher?: i|s, Context?: s, Text?: s}
+QuoteT {QuoteID?: i, Teacher: TeacherT, Context: s, Text: s, Unixtime: i, Upvotes: i}
 
 ErrorT {error: s}
 
@@ -33,7 +35,7 @@ ErrorT {error: s}
 
 //TODO:
 POST /api/quotes/submit QuoteSubmissionT
-	=> {quotes: QuoteT[]}
+	=> {quote: UnverifiedQuoteT}
 	=> 401 Unauthorized
 	=> 400 /*Bad Request*/ ErrorT
 	//..
@@ -41,14 +43,14 @@ POST /api/quotes/submit QuoteSubmissionT
 //later...
 
 //TODO:
-POST /api/quotes/upvote/:id
+POST /api/quotes/:id/upvote
 	=> 200 OK
 	=> 401 Unauthorized
 	=> 404 Not Found
 	//..
 
 //TODO:
-POST /api/quotes/similar/
+POST /api/quotes/similar {text: s}
 	=> {quotes: QuoteT[]}
 	=> 204 No Content
 	=> 400 /*Bad Request*/ ErrorT
@@ -67,10 +69,10 @@ POST /api/quotes/similar/
 //TODO:
 // - later... /admin/teacher
 
-//edit
+//edit unverifiedquote:
 //TODO:
-PATCH /api/unverifiedquotes/:id
-	=> UnverifiedQuoteTuser
+PATCH /api/unverifiedquotes/:id QuoteChangeT
+	=> UnverifiedQuoteT
 	=> 400 /*Bad Request*/ ErrorT
 	=> 401 Unauthorized
 	=> 404 Not Found
@@ -84,20 +86,21 @@ DELETE /api/unverifiedquotes/:id
 	//..
 
 //TODO:
-PUT /api/unverifiedquotes/confirm/:id
+PUT /api/unverifiedquotes/:id/confirm
 	=> 200 OK
 	=> 404 Not Found
 	=> 401 Unauthorized
 	//..
 
 //TODO:
-POST /api/teachers TeacherT //without id
+POST /api/teachers TeacherSubmissionT
 	=> 200 OK
 	=> 404 Not Found
 	=> 401 Unauthorized
 	//..
 
 //later...
+
 //TODO:
 DELETE /api/quotes/:id
 	=> 200 OK
@@ -106,7 +109,7 @@ DELETE /api/quotes/:id
 	//..
 
 //TODO:
-GET /api/unverifiedquotes/similar/:id
+GET /api/unverifiedquotes/:id/similar
 	=> {quotes: QuoteT[]}
 	=> 404 Not Found
 	=> 401 Unauthorized
