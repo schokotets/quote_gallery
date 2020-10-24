@@ -25,92 +25,92 @@ ErrorT {error: s}
 
 // USER ROUTES
 
-//TODO:
-// password-protected (http basic auth)
+	//TODO:
+	// password-protected (http basic auth)
 
-// pages:
-//TODO:
-// /?sortby?=(teachername|time)&page?=i
-// /submit
+	// pages:
+	//TODO:
+	// /?sortby?=(teachername|time)&page?=i
+	// /submit
 
-//TODO:
-POST /api/quotes/submit QuoteSubmissionT
-	=> {quote: UnverifiedQuoteT}
-	=> 401 Unauthorized
-	=> 400 /*Bad Request*/ ErrorT
-	//..
+	//TODO:
+	POST /api/quotes/submit QuoteSubmissionT
+		=> {quote: UnverifiedQuoteT}
+		=> 401 Unauthorized
+		=> 400 /*Bad Request*/ ErrorT
+		//..
 
-//later...
+	//later...
 
-//TODO:
-POST /api/quotes/:id/upvote
-	=> 200 OK
-	=> 401 Unauthorized
-	=> 404 Not Found
-	//..
+	//TODO:
+	POST /api/quotes/:id/upvote
+		=> 200 OK
+		=> 401 Unauthorized
+		=> 404 Not Found
+		//..
 
-//TODO:
-POST /api/quotes/similar {text: s}
-	=> {quotes: QuoteT[]}
-	=> 204 No Content
-	=> 400 /*Bad Request*/ ErrorT
-	=> 401 Unauthorized
-	//..
+	//TODO:
+	POST /api/quotes/similar {text: s}
+		=> {quotes: QuoteT[]}
+		=> 204 No Content
+		=> 400 /*Bad Request*/ ErrorT
+		=> 401 Unauthorized
+		//..
 
 
 // ADMIN ROUTES
 
-//TODO:
-// password-protected (http basic auth)
+	//TODO:
+	// password-protected (http basic auth)
 
-// pages:
-//TODO:
-// - /admin/quotes
-//TODO:
-// - later... /admin/teacher
+	// pages:
+	//TODO:
+	// - /admin/quotes
+	//TODO:
+	// - later... /admin/teacher
 
-//edit unverifiedquote:
-//TODO:
-PATCH /api/unverifiedquotes/:id QuoteChangeT
-	=> UnverifiedQuoteT
-	=> 400 /*Bad Request*/ ErrorT
-	=> 401 Unauthorized
-	=> 404 Not Found
-	//..
+	//edit unverifiedquote:
+	//TODO:
+	PATCH /api/unverifiedquotes/:id QuoteChangeT
+		=> UnverifiedQuoteT
+		=> 400 /*Bad Request*/ ErrorT
+		=> 401 Unauthorized
+		=> 404 Not Found
+		//..
 
-//TODO:
-DELETE /api/unverifiedquotes/:id
-	=> 200 OK
-	=> 404 Not Found
-	=> 401 Unauthorized
-	//..
+	//TODO:
+	DELETE /api/unverifiedquotes/:id
+		=> 200 OK
+		=> 404 Not Found
+		=> 401 Unauthorized
+		//..
 
-//TODO:
-PUT /api/unverifiedquotes/:id/confirm
-	=> 200 OK
-	=> 404 Not Found
-	=> 401 Unauthorized
-	//..
+	//TODO:
+	PUT /api/unverifiedquotes/:id/confirm
+		=> 200 OK
+		=> 404 Not Found
+		=> 401 Unauthorized
+		//..
 
-//TODO:
-POST /api/teachers TeacherSubmissionT
-	=> 200 OK
-	=> 404 Not Found
-	=> 401 Unauthorized
-	//..
+	//TODO:
+	POST /api/teachers TeacherSubmissionT
+		=> 200 OK
+		=> 404 Not Found
+		=> 401 Unauthorized
+		//..
 
-//later...
+	//later...
 
-//TODO:
-DELETE /api/quotes/:id
-	=> 200 OK
-	=> 404 Not Found
-	=> 401 Unauthorized
-	//..
+	//TODO:
+	DELETE /api/quotes/:id
+		=> 200 OK
+		=> 404 Not Found
+		=> 401 Unauthorized
+		//..
 
-//TODO:
-GET /api/unverifiedquotes/:id/similar
-	=> {quotes: QuoteT[]}
-	=> 404 Not Found
-	=> 401 Unauthorized
-	//..
+	//TODO:
+	GET /api/unverifiedquotes/:id/similar
+		=> {quotes: QuoteT[]}
+		=> 404 Not Found
+		=> 401 Unauthorized
+		//..
