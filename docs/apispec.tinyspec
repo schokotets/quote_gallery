@@ -25,31 +25,26 @@ ErrorT {error: s}
 
 // USER ROUTES
 
-	//TODO:
-	// password-protected (http basic auth)
+	//TODO: password-protected (http basic auth)
 
 	// pages:
-	//TODO:
-	// /?sortby?=(teachername|time)&page?=i
-	// /submit
+	// - /submit -> later... TODO: suggest similar
+	// - TODO: /?sortby?=(teachername|time)&page?=i
 
-	//TODO:
 	POST /api/quotes/submit QuoteSubmissionT
-		=> {quote: UnverifiedQuoteT}
+		=> 200 OK
 		=> 401 Unauthorized
 		=> 400 /*Bad Request*/ ErrorT
-		//..
+		=> 500 Internal Server Error
 
-	//later...
-
-	//TODO:
+	//later... TODO:
 	POST /api/quotes/:id/upvote
 		=> 200 OK
 		=> 401 Unauthorized
 		=> 404 Not Found
 		//..
 
-	//TODO:
+	//later... TODO:
 	POST /api/quotes/similar {text: s}
 		=> {quotes: QuoteT[]}
 		=> 204 No Content
@@ -60,16 +55,13 @@ ErrorT {error: s}
 
 // ADMIN ROUTES
 
-	//TODO:
-	// password-protected (http basic auth)
+	//TODO: password-protected (http basic auth)
 
 	// pages:
-	//TODO:
-	// - /admin/quotes
-	//TODO:
-	// - later... /admin/teacher
+	// - /admin/unverifiedquotes -> TODO: functionality
+	// - TODO: /admin/quotes
+	// - later... TODO: /admin/teacher
 
-	//edit unverifiedquote:
 	//TODO:
 	PATCH /api/unverifiedquotes/:id QuoteChangeT
 		=> UnverifiedQuoteT
@@ -99,16 +91,14 @@ ErrorT {error: s}
 		=> 401 Unauthorized
 		//..
 
-	//later...
-
-	//TODO:
+	//later... TODO:
 	DELETE /api/quotes/:id
 		=> 200 OK
 		=> 404 Not Found
 		=> 401 Unauthorized
 		//..
 
-	//TODO:
+	//later... TODO:
 	GET /api/unverifiedquotes/:id/similar
 		=> {quotes: QuoteT[]}
 		=> 404 Not Found
