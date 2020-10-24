@@ -2,6 +2,7 @@ package web
 
 import (
 	"encoding/json"
+	"fmt"
 	"hash/fnv"
 	"io/ioutil"
 	"net/http"
@@ -39,28 +40,36 @@ func handlerAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
 	err := json.Unmarshal(bytes, &subm)
 
 	if err != nil {
-		goto badRequest
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "unparsable JSON")
+		return
 	}
 
 	// Check validity of temporary QuoteSubmission and
 	// copy content into UnverifiedQuote
 
-	if len(subm.Text) == 0 {
-		goto badRequest
-	}
-
 	switch subm.Teacher.(type) {
-	case int:
-		if subm.Teacher.(uint32) == 0 {
-			goto badRequest
+	case float64:
+		if subm.Teacher.(float64) == 0 {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, "invalid TeacherID: 0")
+			return
 		}
-		quote.TeacherID = subm.Teacher.(uint32)
+		quote.TeacherID = uint32(subm.Teacher.(float64))
 		quote.TeacherName = ""
 	case string:
 		quote.TeacherID = 0
 		quote.TeacherName = subm.Teacher.(string)
 	default:
-		goto badRequest
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "invalid TeacherID: its type is neither string nor int")
+		return
+	}
+
+	if len(subm.Text) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Text is empty")
+		return
 	}
 
 	quote.Context = subm.Context
@@ -76,10 +85,6 @@ func handlerAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 
-	return
-
-badRequest:
-	w.WriteHeader(http.StatusBadRequest)
 	return
 }
 
