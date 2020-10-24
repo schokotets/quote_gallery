@@ -71,7 +71,11 @@ func handlerAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
 	quote.IPHash = hash(strings.Split(r.RemoteAddr, ":")[0])
 
 	// Store UnverifiedQuote in database
-	database.CreateUnverifiedQuote(quote)
+	err = database.CreateUnverifiedQuote(quote)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+
 	return
 
 badRequest:
