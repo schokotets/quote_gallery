@@ -12,17 +12,27 @@
 		<label for="quotefield">Zitat:</label>
 		<input class="fullwidth" id="quotefield" name="text" type="text" required>
 		<br>
+
 		<label for="contextfield">Kontext (Situation; optional):</label>
 		<input class="fullwidth" id="contextfield" name="context" type="text">
 		<br>
-		<label for="teacherfield">Lehrer:</label>
-		<select id="teacherfield" name="teacherid" required>
+
+		<label for="teacherselect">Lehrer:</label>
+		<select id="teacherselect" name="teacherid" required>
 			<option value="" selected disabled hidden></option>
+			<option value=""><i>selbst eingeben...</i></option>
 			{{range .}}
 			<option value="{{.TeacherID}}">{{.Name}}, {{.Title}}{{if .Note}} ({{.Note}}){{end}}</option>
 			{{end}}
 		</select>
 		<br>
+
+		<div class="customteacher" style="display: none">
+			<label for="customteacherfield">Name des Lehrers (bitte eindeutig - notfalls mit Notiz):</label>
+			<input class="fullwidth" id="customteacherfield" name="teachername" type="text">
+			<br>
+		</div>
+
 		<input type="submit" value="Einsenden">
 
 	</form>

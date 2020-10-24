@@ -15,6 +15,8 @@ function processForm(e) {
 
   if (FD.get("teacherid")){
     req["Teacher"] = parseInt(FD.get("teacherid"));
+  } else if (FD.get("teachername")){
+    req["Teacher"] = FD.get("teachername");
   }
 
   axios.post("/api/quotes/submit", req)
@@ -52,4 +54,20 @@ function axiosErrorString(response) {
     errorstr += "\nAntwort: " + response.data;
   }
   return errorstr;
+}
+
+let teacherselect = document.getElementById("teacherselect");
+let customteacher = document.getElementsByClassName("customteacher")[0];
+let customteacherfield = document.getElementById("customteacherfield");
+
+teacherselect.addEventListener("change", checkTeacherSelect);
+
+function checkTeacherSelect(e) {
+  if(e.target.selectedIndex == 1) { //custom field
+    customteacher.style.display = "unset"
+    customteacherfield.setAttribute("required", true)
+  } else {
+    customteacher.style.display = "none"
+    customteacherfield.removeAttribute("required")
+  }
 }
