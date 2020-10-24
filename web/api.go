@@ -44,6 +44,11 @@ func handlerAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
 
 	// Check validity of temporary QuoteSubmission and
 	// copy content into UnverifiedQuote
+
+	if len(subm.Text) == 0 {
+		goto badRequest
+	}
+
 	switch subm.Teacher.(type) {
 	case int:
 		if subm.Teacher.(uint32) == 0 {
@@ -58,12 +63,8 @@ func handlerAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
 		goto badRequest
 	}
 
-	if len(subm.Context) == 0 || len(subm.Text) == 0 {
-		goto badRequest
-	} else {
-		quote.Context = subm.Context
-		quote.Text = subm.Text
-	}
+	quote.Context = subm.Context
+	quote.Text = subm.Text
 
 	// Add further information to UnverifiedQuote
 	quote.Unixtime = uint64(time.Now().Unix())

@@ -160,7 +160,7 @@ func Initialize() error {
 	_, err = database.Exec(
 		`CREATE TABLE IF NOT EXISTS unverifiedQuotes (
 		QuoteID serial PRIMARY KEY,
-		TeacherID integer, 
+		TeacherID integer REFERENCES teachers (TeacherID) ON DELETE CASCADE, 
 		TeacherName varchar, 
 		Context varchar,
 		Text varchar,
@@ -584,11 +584,20 @@ func CreateUnverifiedQuote(q UnverifiedQuoteT) error {
 	}
 
 	// add quote to database
-	_, err = database.Exec(
-		`INSERT INTO unverifiedQuotes (TeacherID, TeacherName, Context, Text, Unixtime, IPHash) VALUES ($1, $2, $3, $4, $5, $6)`,
-		q.TeacherID, q.TeacherName, q.Context, q.Text, q.Unixtime, q.IPHash)
-	if err != nil {
-		return errors.New("CreateUnverifiedQuote: inserting quote into database failed: " + err.Error())
+	if q.TeacherID != 0 {
+		_, err = database.Exec(
+			`INSERT INTO unverifiedQuotes (TeacherID, TeacherName, Context, Text, Unixtime, IPHash) VALUES ($1, $2, $3, $4, $5, $6)`,
+			q.TeacherID, q.TeacherName, q.Context, q.Text, q.Unixtime, q.IPHash)
+		if err != nil {
+			return errors.New("CreateUnverifiedQuote: inserting quote into database failed: " + err.Error())
+		}
+	} else {
+		_, err = database.Exec(
+			`INSERT INTO unverifiedQuotes (TeacherID, TeacherName, Context, Text, Unixtime, IPHash) VALUES ($1, $2, $3, $4, $5, $6)`,
+			nil, q.TeacherName, q.Context, q.Text, q.Unixtime, q.IPHash)
+		if err != nil {
+			return errors.New("CreateUnverifiedQuote: inserting quote into database failed: " + err.Error())
+		}
 	}
 
 	return nil
@@ -612,12 +621,23 @@ func UpdateUnverifiedQuote(q UnverifiedQuoteT) error {
 
 	// try to find corresponding entry database and overwrite it
 	var res sql.Result
-	res, err = database.Exec(
-		`UPDATE unverifiedQuotes SET TeacherID=$2, TeacherName=$3, Context=$4, Text=$5, Unixtime=$6, IPHash=$7 WHERE  QuoteID=$1`,
-		q.QuoteID, q.TeacherID, q.TeacherName, q.Context, q.Text, q.Unixtime, q.IPHash)
-	if err != nil {
-		return errors.New("UpdateUnverifiedQuote: updating unverifiedQuote in database failed: " + err.Error())
+
+	if q.TeacherID != 0 {
+		res, err = database.Exec(
+			`UPDATE unverifiedQuotes SET TeacherID=$2, TeacherName=$3, Context=$4, Text=$5, Unixtime=$6, IPHash=$7 WHERE  QuoteID=$1`,
+			q.QuoteID, q.TeacherID, q.TeacherName, q.Context, q.Text, q.Unixtime, q.IPHash)
+		if err != nil {
+			return errors.New("UpdateUnverifiedQuote: updating unverifiedQuote in database failed: " + err.Error())
+		}
+	} else {
+		res, err = database.Exec(
+			`UPDATE unverifiedQuotes SET TeacherID=$2, TeacherName=$3, Context=$4, Text=$5, Unixtime=$6, IPHash=$7 WHERE  QuoteID=$1`,
+			q.QuoteID, nil, q.TeacherName, q.Context, q.Text, q.Unixtime, q.IPHash)
+		if err != nil {
+			return errors.New("UpdateUnverifiedQuote: updating unverifiedQuote in database failed: " + err.Error())
+		}
 	}
+
 	if rowsAffected, _ := res.RowsAffected(); rowsAffected == 0 {
 		return errors.New("UpdateUnverifiedQuote: could not find specified database row for updating")
 	}
