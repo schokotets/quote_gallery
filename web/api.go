@@ -83,13 +83,15 @@ func handlerAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
 	// Store UnverifiedQuote in database
 	err = database.CreateUnverifiedQuote(quote)
 	if err != nil {
-		//TODO do not return InternalServerError if TeacherID invalid
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "internal server error")
-		log.Printf("/api/quotes/submit: quote creation failed with error %v for request body %s and UnverifiedQuoteT %v", err, bytes, quote)
+		if (strings.Contains(err.Error(),`violates foreign key constraint "unverifiedquotes_teacherid_fkey"`)) {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, "Teacher: no teacher with that ID")
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "internal server error")
+			log.Printf("/api/quotes/submit: quote creation failed with error '%v' for request body '%s' and UnverifiedQuoteT %v", err, bytes, quote)
+		}
 	}
-
-	return
 }
 
 /* -------------------------------------------------------------------------- */
