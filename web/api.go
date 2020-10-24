@@ -45,11 +45,11 @@ func handlerAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
 	// Check validity of temporary QuoteSubmission and
 	// copy content into UnverifiedQuote
 	switch subm.Teacher.(type) {
-	case int:
-		if subm.Teacher.(uint32) == 0 {
+	case float64:
+		if subm.Teacher.(float64) == 0 {
 			goto panic
 		}
-		quote.TeacherID = subm.Teacher.(uint32)
+		quote.TeacherID = uint32(subm.Teacher.(float64))
 		quote.TeacherName = ""
 	case string:
 		quote.TeacherID = 0
