@@ -18,3 +18,17 @@ input, select {
 .fullwidth {
   width: 100%;
 }
+
+table {
+  border-collapse: collapse;
+  margin-top: 1em;
+}
+
+table td, table th {
+  border: 1px solid;
+  padding: 0.2em;
+}
+
+table tr:nth-child(2n), table th {
+  background-color: #ddd;
+}

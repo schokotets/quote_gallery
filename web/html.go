@@ -25,6 +25,12 @@ func pageRoot(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, quotes)
 }
 
+func pageAdminUnverifiedQuotes(w http.ResponseWriter, r *http.Request) {
+	teachers, _ := database.GetUnverifiedQuotes()
+	tmpl := template.Must(template.ParseFiles("pages/unverifiedquotes.html"))
+	tmpl.Execute(w, teachers)
+}
+
 func pageSubmit(w http.ResponseWriter, r *http.Request) {
 	teachers, _ := database.GetTeachers()
 	tmpl := template.Must(template.ParseFiles("pages/submit.html"))

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+	<meta charset="UTF-8">
+	<title>Unbestätigte Zitate - Adminbereich</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="/static/style.css" media="all">
+</head>
+<body style="max-width: unset">
+	<h1>Unbestätigte Zitate</h1>
+	<table>
+		<thead>
+			<tr>
+				<th>ID</th>
+				<th>Teacher</th>
+				<th>Context</th>
+				<th>Text</th>
+				<th>Unixtime</th>
+				<th>IPHash</th>
+			</tr>
+		</thead>
+		<tbody>
+			{{range .}}
+			<tr>
+				<td>{{.QuoteID}}</td>
+				<td>{{if .TeacherID}}ID #{{.TeacherID}}{{end}}
+					{{if .TeacherName}}{{.TeacherName}}{{end}}</td>
+				<td>{{.Context}}</td>
+				<td>{{.Text}}</td>
+				<td>{{.Unixtime}}</td>
+				<td>{{.IPHash}}</td>
+			</tr>
+			{{end}}
+		</tbody>
+	</table>
+</body>
+</html>

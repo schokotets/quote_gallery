@@ -13,6 +13,7 @@ func SetupRoutes() {
 	http.Handle("/static/", http.StripPrefix("/static/", handlerFiles))
 
 	http.HandleFunc("/submit", pageSubmit)
+	http.HandleFunc("/admin/unverifiedquotes", pageAdminUnverifiedQuotes)
 
 	http.HandleFunc("/api/quotes/submit", handlerAPIQuotesSubmit)
 }
