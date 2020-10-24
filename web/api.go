@@ -39,7 +39,7 @@ func handlerAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
 	err := json.Unmarshal(bytes, &subm)
 
 	if err != nil {
-		goto panic
+		goto badRequest
 	}
 
 	// Check validity of temporary QuoteSubmission and
@@ -47,7 +47,7 @@ func handlerAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
 	switch subm.Teacher.(type) {
 	case int:
 		if subm.Teacher.(uint32) == 0 {
-			goto panic
+			goto badRequest
 		}
 		quote.TeacherID = subm.Teacher.(uint32)
 		quote.TeacherName = ""
@@ -55,11 +55,11 @@ func handlerAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
 		quote.TeacherID = 0
 		quote.TeacherName = subm.Teacher.(string)
 	default:
-		goto panic
+		goto badRequest
 	}
 
 	if len(subm.Context) == 0 || len(subm.Text) == 0 {
-		goto panic
+		goto badRequest
 	} else {
 		quote.Context = subm.Context
 		quote.Text = subm.Text
@@ -73,7 +73,7 @@ func handlerAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
 	database.CreateUnverifiedQuote(quote)
 	return
 
-panic:
+badRequest:
 	w.WriteHeader(http.StatusBadRequest)
 	return
 }
