@@ -8,7 +8,7 @@
 </head>
 <body>
 	<h1>Zitat einsenden</h1>
-	<form action="/api/submitquote" method="post">
+	<form id="form-submit" method="post">
 		<label for="quotefield">Zitat:</label>
 		<input class="fullwidth" id="quotefield" name="text" type="text" required>
 		<br>
@@ -26,5 +26,7 @@
 		<input type="submit" value="Einsenden">
 
 	</form>
+	<script src="/static/axios.min.js"></script>
+	<script src="/static/submit.js"></script>
 </body>
 </html>
