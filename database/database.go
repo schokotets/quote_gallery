@@ -547,7 +547,7 @@ func GetUnverifiedQuotes() (*[]UnverifiedQuoteT, error) {
 		Unixtime,
 		IPHash FROM unverifiedQuotes`)
 	if err != nil {
-		return nil, errors.New("GetUnverifiedQuotes: loading teachers from database failed: " + err.Error())
+		return nil, errors.New("GetUnverifiedQuotes: loading unverifiedQuotes from database failed: " + err.Error())
 	}
 
 	var quotes []UnverifiedQuoteT
@@ -556,8 +556,10 @@ func GetUnverifiedQuotes() (*[]UnverifiedQuoteT, error) {
 	for rows.Next() {
 		// Get unverifiedQuotes data
 		var q UnverifiedQuoteT
-		rows.Scan(&q.QuoteID, &q.TeacherID, &q.TeacherName, &q.Context, &q.Text, &q.Unixtime, &q.IPHash)
-
+		err := rows.Scan(&q.QuoteID, &q.TeacherID, &q.TeacherName, &q.Context, &q.Text, &q.Unixtime, &q.IPHash)
+		if err != nil {
+			return nil, errors.New("GetUnverifiedQuotes: parsing unverifiedQuotes failed: " + err.Error())
+		}
 		// Add unverifiedQuote to return slice
 		quotes = append(quotes, q)
 	}

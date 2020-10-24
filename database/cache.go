@@ -85,6 +85,9 @@ func unsafeLoadCache() error {
 		// Get id and text of quote
 		var q QuoteT
 		rows.Scan(&q.QuoteID, &q.TeacherID, &q.Context, &q.Text, &q.Unixtime, &q.Upvotes)
+		if err != nil {
+			return errors.New("unsafeLoadCache: parsing quotes failed: " + err.Error())
+		}
 
 		// add to local database
 		// unsafe, because cache is already locked for writing
@@ -114,6 +117,9 @@ func unsafeLoadCache() error {
 		// Get teacher data (id, name, title, note)
 		var t TeacherT
 		rows.Scan(&t.TeacherID, &t.Name, &t.Title, &t.Note)
+		if err != nil {
+			return errors.New("unsafeLoadCache: parsing teachers failed: " + err.Error())
+		}
 
 		// add to local database
 		// unsafe, because cache is already locked for writing
