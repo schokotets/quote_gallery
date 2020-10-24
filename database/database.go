@@ -24,12 +24,12 @@ import (
 // Match      exists only locally, not saved in database!
 //              (used by GetQuotesFromString to quantify how well this quote fits the string)
 type QuoteT struct {
-	QuoteID   uint32
-	TeacherID uint32
+	QuoteID   int32
+	TeacherID int32
 	Context   string
 	Text      string
-	Unixtime  uint64
-	Upvotes   uint32
+	Unixtime  int64
+	Upvotes   int32
 	Match     float32
 }
 
@@ -42,13 +42,13 @@ type QuoteT struct {
 // Unixtime     the time of submission; optional
 // IPHash       optional
 type UnverifiedQuoteT struct {
-	QuoteID     uint32
-	TeacherID   uint32
+	QuoteID     int32
+	TeacherID   int32
 	TeacherName string
 	Context     string
 	Text        string
-	Unixtime    uint64
-	IPHash      uint64
+	Unixtime    int64
+	IPHash      int64
 }
 
 // TeacherT stores one teacher
@@ -57,7 +57,7 @@ type UnverifiedQuoteT struct {
 // Title      the teacher's title
 // Note       optional notes, e.g. subjects
 type TeacherT struct {
-	TeacherID uint32
+	TeacherID int32
 	Name      string
 	Title     string
 	Note      string
@@ -323,7 +323,7 @@ func UpdateQuote(q QuoteT) error {
 
 // DeleteQuote deletes the quote corresponding to the given ID from the database and the quotes slice
 // It will also modifiy the words map
-func DeleteQuote(ID uint32) error {
+func DeleteQuote(ID int32) error {
 	if database == nil {
 		return errors.New("DeleteQuote: not connected to database")
 	}
@@ -475,7 +475,7 @@ func UpdateTeacher(t TeacherT) error {
 
 // DeleteTeacher deletes the teacher corresponding to the given ID from the database and the teachers slice
 // It will delete all corresponding quotes
-func DeleteTeacher(ID uint32) error {
+func DeleteTeacher(ID int32) error {
 	if database == nil {
 		return errors.New("DeleteTeacher: not connected to database")
 	}
@@ -566,7 +566,7 @@ func GetUnverifiedQuotes() (*[]UnverifiedQuoteT, error) {
 
 		// TeacherID can be nill, see CreateUnverifiedQuote and UpdateUnverifiedQuote
 		if TeacherID.Valid {
-			q.TeacherID = uint32(TeacherID.Int32)
+			q.TeacherID = TeacherID.Int32
 		}
 
 		// Add unverifiedQuote to return slice
@@ -657,7 +657,7 @@ func UpdateUnverifiedQuote(q UnverifiedQuoteT) error {
 }
 
 // DeleteUnverifiedQuote deletes an unverified quote
-func DeleteUnverifiedQuote(ID uint32) error {
+func DeleteUnverifiedQuote(ID int32) error {
 	if database == nil {
 		return errors.New("DeleteUnverifiedQuote: not connected to database")
 	}

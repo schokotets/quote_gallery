@@ -55,7 +55,7 @@ func handlerAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "invalid TeacherID: 0")
 			return
 		}
-		quote.TeacherID = uint32(subm.Teacher.(float64))
+		quote.TeacherID = int32(subm.Teacher.(float64))
 		quote.TeacherName = ""
 	case string:
 		quote.TeacherID = 0
@@ -76,7 +76,7 @@ func handlerAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
 	quote.Text = subm.Text
 
 	// Add further information to UnverifiedQuote
-	quote.Unixtime = uint64(time.Now().Unix())
+	quote.Unixtime = int64(time.Now().Unix())
 	quote.IPHash = hash(strings.Split(r.RemoteAddr, ":")[0])
 
 	// Store UnverifiedQuote in database
@@ -92,8 +92,8 @@ func handlerAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
 /*                         UNEXPORTED HELPER FUNCTIONS                        */
 /* -------------------------------------------------------------------------- */
 
-func hash(s string) uint64 {
+func hash(s string) int64 {
 	x := fnv.New64a()
 	x.Write([]byte(s))
-	return x.Sum64()
+	return int64(x.Sum64())
 }

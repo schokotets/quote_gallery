@@ -13,7 +13,7 @@ import (
 // totalOccurences  number of occurences of this word in all quotes
 // occurenceSlice   stores the number of occurences of this word for every quote
 type wordsMapT struct {
-	totalOccurences uint32
+	totalOccurences int32
 	occurenceSlice  []occurenceSliceT
 }
 
@@ -22,7 +22,7 @@ type wordsMapT struct {
 // count   number of occurences
 type occurenceSliceT struct {
 	enumID int32
-	count  uint32
+	count  int32
 }
 
 /* -------------------------------------------------------------------------- */
@@ -238,7 +238,7 @@ func unsafeOverwriteQuoteInCache(q QuoteT) error {
 	return nil
 }
 
-func unsafeDeleteTeacherFromCache(ID uint32) error {
+func unsafeDeleteTeacherFromCache(ID int32) error {
 	quotes := *unsafeGetQuotesFromCache()
 	for _, q := range quotes {
 		if q.TeacherID == ID {
@@ -272,7 +272,7 @@ func unsafeDeleteTeacherFromCache(ID uint32) error {
 
 }
 
-func unsafeDeleteQuoteFromCache(ID uint32) error {
+func unsafeDeleteQuoteFromCache(ID int32) error {
 	var enumIDRemove int32 = -1
 	var enumIDReplace int32 = -1
 
