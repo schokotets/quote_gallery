@@ -8,6 +8,7 @@ import (
 	"quote_gallery/database"
 	"strings"
 	"time"
+	"fmt"
 )
 
 /* -------------------------------------------------------------------------- */
@@ -39,7 +40,9 @@ func handlerAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
 	err := json.Unmarshal(bytes, &subm)
 
 	if err != nil {
-		goto panic
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "unparsable JSON")
+		return
 	}
 
 	// Check validity of temporary QuoteSubmission and
@@ -47,7 +50,9 @@ func handlerAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
 	switch subm.Teacher.(type) {
 	case float64:
 		if subm.Teacher.(float64) == 0 {
-			goto panic
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, "invalid TeacherID: 0")
+			return
 		}
 		quote.TeacherID = uint32(subm.Teacher.(float64))
 		quote.TeacherName = ""
@@ -55,11 +60,15 @@ func handlerAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
 		quote.TeacherID = 0
 		quote.TeacherName = subm.Teacher.(string)
 	default:
-		goto panic
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "invalid TeacherID: its type is neither string nor int")
+		return
 	}
 
 	if len(subm.Context) == 0 || len(subm.Text) == 0 {
-		goto panic
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Context and Text are empty")
+		return
 	} else {
 		quote.Context = subm.Context
 		quote.Text = subm.Text
@@ -71,10 +80,6 @@ func handlerAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
 
 	// Store UnverifiedQuote in database
 	database.CreateUnverifiedQuote(quote)
-	return
-
-panic:
-	w.WriteHeader(http.StatusBadRequest)
 	return
 }
 
