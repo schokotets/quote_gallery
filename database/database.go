@@ -555,11 +555,20 @@ func GetUnverifiedQuotes() (*[]UnverifiedQuoteT, error) {
 	// Iterate over all unverifiedQuotes from database
 	for rows.Next() {
 		// Get unverifiedQuotes data
+
 		var q UnverifiedQuoteT
-		err := rows.Scan(&q.QuoteID, &q.TeacherID, &q.TeacherName, &q.Context, &q.Text, &q.Unixtime, &q.IPHash)
+		var TeacherID sql.NullInt32
+
+		err := rows.Scan(&q.QuoteID, &TeacherID, &q.TeacherName, &q.Context, &q.Text, &q.Unixtime, &q.IPHash)
 		if err != nil {
 			return nil, errors.New("GetUnverifiedQuotes: parsing unverifiedQuotes failed: " + err.Error())
 		}
+
+		// TeacherID can be nill, see CreateUnverifiedQuote and UpdateUnverifiedQuote
+		if TeacherID.Valid {
+			q.TeacherID = uint32(TeacherID.Int32)
+		}
+
 		// Add unverifiedQuote to return slice
 		quotes = append(quotes, q)
 	}
