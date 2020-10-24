@@ -18,7 +18,7 @@ TeacherSubmissionT {Name: s, Title: s, Note: s}
 UnverifiedQuoteT {QuoteID: i, Teacher: i|s, Context: s, Text: s, Unixtime i}
 QuoteSubmissionT {Teacher: i|s, Context: s, Text: s}
 QuoteChangeT {Teacher?: i|s, Context?: s, Text?: s}
-QuoteT {QuoteID?: i, Teacher: TeacherT, Context: s, Text: s, Unixtime: i, Upvotes: i}
+QuoteT {QuoteID: i, Teacher: TeacherT, Context: s, Text: s, Unixtime: i, Upvotes: i}
 
 ErrorT {error: s}
 

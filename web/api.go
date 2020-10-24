@@ -1,37 +1,89 @@
 package web
 
 import (
-	"fmt"
+	"encoding/json"
+	"hash/fnv"
+	"io/ioutil"
 	"net/http"
 	"quote_gallery/database"
-	"strconv"
+	"strings"
 	"time"
 )
 
-// server is sent a form or returns JSON data
+/* -------------------------------------------------------------------------- */
+/*                                 DEFINITIONS                                */
+/* -------------------------------------------------------------------------- */
+
+type quoteSubmissionT struct {
+	Teacher interface{}
+	Context string
+	Text    string
+}
+
+/* -------------------------------------------------------------------------- */
+/*                           EXPORTED API FUNCTIONS                           */
+/* -------------------------------------------------------------------------- */
 
 func handlerAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
+	var subm quoteSubmissionT
+	var quote database.UnverifiedQuoteT
+
+	// Check if right http method is used
 	if r.Method != "POST" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
-	if err := r.ParseForm(); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "ParseForm() err: %v", err)
-		return
+
+	// parse json request body into temporary QuoteSubmission
+	bytes, _ := ioutil.ReadAll(r.Body)
+	err := json.Unmarshal(bytes, &subm)
+
+	if err != nil {
+		goto panic
 	}
 
-	teacherid, err := strconv.Atoi(r.FormValue("teacherid"))
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Form field teacherid is not an integer")
-		return
+	// Check validity of temporary QuoteSubmission and
+	// copy content into UnverifiedQuote
+	switch subm.Teacher.(type) {
+	case int:
+		if subm.Teacher.(uint32) == 0 {
+			goto panic
+		}
+		quote.TeacherID = subm.Teacher.(uint32)
+		quote.TeacherName = ""
+	case string:
+		quote.TeacherID = 0
+		quote.TeacherName = subm.Teacher.(string)
+	default:
+		goto panic
 	}
-	//TODO handle error
-	database.CreateQuote(database.QuoteT{
-		Text:      r.FormValue("text"),
-		Context:   r.FormValue("context"),
-		TeacherID: uint32(teacherid),
-		Unixtime:  uint64(time.Now().Unix())})
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+
+	if len(subm.Context) == 0 || len(subm.Text) == 0 {
+		goto panic
+	} else {
+		quote.Context = subm.Context
+		quote.Text = subm.Text
+	}
+
+	// Add further information to UnverifiedQuote
+	quote.Unixtime = uint64(time.Now().Unix())
+	quote.IPHash = hash(strings.Split(r.RemoteAddr, ":")[0])
+
+	// Store UnverifiedQuote in database
+	database.CreateUnverifiedQuote(quote)
+	return
+
+panic:
+	w.WriteHeader(http.StatusBadRequest)
+	return
+}
+
+/* -------------------------------------------------------------------------- */
+/*                         UNEXPORTED HELPER FUNCTIONS                        */
+/* -------------------------------------------------------------------------- */
+
+func hash(s string) uint64 {
+	x := fnv.New64a()
+	x.Write([]byte(s))
+	return x.Sum64()
 }
