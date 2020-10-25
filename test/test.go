@@ -10,14 +10,14 @@ func main() {
 	log.Print("Connecting to database on :5432")
 	database.Connect()
 
-	err := database.ExecuteQuery("START TRANSACTION")
-	if err != nil {
-		log.Fatal("Cannot start transaction: ", err)
-	}
-	err = database.ExecuteQuery("DROP TABLE IF EXISTS teachers, quotes, unverifiedQuotes")
-	if err != nil {
-		log.Fatal("Cannot temp-delete tables: ", err)
-	}
+	// err := database.ExecuteQuery("START TRANSACTION")
+	// if err != nil {
+	// 	log.Fatal("Cannot start transaction: ", err)
+	// }
+	// err = database.ExecuteQuery("DROP TABLE IF EXISTS teachers, quotes, unverifiedQuotes")
+	// if err != nil {
+	// 	log.Fatal("Cannot temp-delete tables: ", err)
+	// }
 
 	database.Initialize()
 
@@ -96,5 +96,5 @@ func main() {
 	// j, _ := database.GetUnverifiedQuotes()
 	// fmt.Println(j)
 
-	database.ExecuteQuery("ROLLBACK")
+	// database.ExecuteQuery("ROLLBACK")
 }
