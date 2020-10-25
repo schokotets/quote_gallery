@@ -4,19 +4,22 @@ form.addEventListener("submit", processForm);
 
 function processForm(e) {
   e.preventDefault();
-  let FD = new FormData(form);
 
   let req = {};
-  req["Text"] = FD.get("text");
+  req["Text"] = document.getElementById("quotefield").value;
 
-  if (FD.get("context")){
-    req["Context"] = FD.get("context");
+  let context = document.getElementById("contextfield").value;
+  if (context){
+    req["Context"] = context
   }
-
-  if (FD.get("teacherid")){
-    req["Teacher"] = parseInt(FD.get("teacherid"));
-  } else if (FD.get("teachername")){
-    req["Teacher"] = FD.get("teachername");
+  let teacherid = document.getElementById("teacherselect").value
+  if (teacherid){
+    req["Teacher"] = parseInt(teacherid);
+  } else {
+    let teachername = document.getElementById("customteacherfield").value;
+    if (teachername) {
+      req["Teacher"] = teachername;
+    }
   }
 
   axios.post("/api/quotes/submit", req)
