@@ -184,12 +184,15 @@ func unsafeOverwriteTeacherInCache(t TeacherT) error {
 	return nil
 }
 
+// Unixtime, Upvotes and Match fields will be ignored
 func unsafeOverwriteQuoteInCache(q QuoteT) error {
 
 	var enumID int32 = -1
 	for i, v := range cache.quoteSlice {
 		if v.QuoteID == q.QuoteID {
-			cache.quoteSlice[i] = q
+			cache.quoteSlice[i].Text = q.Text
+			cache.quoteSlice[i].Context = q.Context
+			cache.quoteSlice[i].TeacherID = q.TeacherID
 			enumID = int32(i)
 		}
 	}

@@ -271,6 +271,7 @@ func CreateQuote(q QuoteT) error {
 }
 
 // UpdateQuote updates an existing quote by given QuoteID
+// Upvotes and Unixtime fields will be ignored
 func UpdateQuote(q QuoteT) error {
 	if database == nil {
 		return errors.New("UpdateQuote: not connected to database")
@@ -295,8 +296,8 @@ func UpdateQuote(q QuoteT) error {
 	// try to find corresponding entry in database and overwrite it
 	var res sql.Result
 	res, err = database.Exec(
-		`UPDATE quotes SET TeacherID=$2, Context=$3, Text=$4, Unixtime=$5, Upvotes=$6 WHERE QuoteID=$1`,
-		q.QuoteID, q.TeacherID, q.Context, q.Text, q.Unixtime, q.Upvotes)
+		`UPDATE quotes SET TeacherID=$2, Context=$3, Text=$4 WHERE QuoteID=$1`,
+		q.QuoteID, q.TeacherID, q.Context, q.Text)
 	if err != nil {
 		return errors.New("UpdateQuote: updating quote in database failed: " + err.Error())
 	}
@@ -615,6 +616,7 @@ func CreateUnverifiedQuote(q UnverifiedQuoteT) error {
 }
 
 // UpdateUnverifiedQuote updates an unverified quote
+// IPHash and Unixtime fields will be ignored
 func UpdateUnverifiedQuote(q UnverifiedQuoteT) error {
 	if database == nil {
 		return errors.New("UpdateUnverifiedQuote: not connected to database")
@@ -635,15 +637,15 @@ func UpdateUnverifiedQuote(q UnverifiedQuoteT) error {
 
 	if q.TeacherID != 0 {
 		res, err = database.Exec(
-			`UPDATE unverifiedQuotes SET TeacherID=$2, TeacherName=$3, Context=$4, Text=$5, Unixtime=$6, IPHash=$7 WHERE  QuoteID=$1`,
-			q.QuoteID, q.TeacherID, q.TeacherName, q.Context, q.Text, q.Unixtime, q.IPHash)
+			`UPDATE unverifiedQuotes SET TeacherID=$2, TeacherName=$3, Context=$4, Text=$5 WHERE  QuoteID=$1`,
+			q.QuoteID, q.TeacherID, q.TeacherName, q.Context, q.Text)
 		if err != nil {
 			return errors.New("UpdateUnverifiedQuote: updating unverifiedQuote in database failed: " + err.Error())
 		}
 	} else {
 		res, err = database.Exec(
-			`UPDATE unverifiedQuotes SET TeacherID=$2, TeacherName=$3, Context=$4, Text=$5, Unixtime=$6, IPHash=$7 WHERE  QuoteID=$1`,
-			q.QuoteID, nil, q.TeacherName, q.Context, q.Text, q.Unixtime, q.IPHash)
+			`UPDATE unverifiedQuotes SET TeacherID=$2, TeacherName=$3, Context=$4, Text=$5 WHERE  QuoteID=$1`,
+			q.QuoteID, nil, q.TeacherName, q.Context, q.Text)
 		if err != nil {
 			return errors.New("UpdateUnverifiedQuote: updating unverifiedQuote in database failed: " + err.Error())
 		}
