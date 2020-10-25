@@ -12,13 +12,14 @@
 
 // MODELS
 
-TeacherT {TeacherID: i, Name: s, Title: s, Note: s}
-TeacherSubmissionT {Name: s, Title: s, Note: s}
+// for writing:
+QuoteInputT {Teacher: i|s, Context: s, Text: s}
+TeacherInputT {Name: s, Title: s, Note: s}
 
+// for reading:
 UnverifiedQuoteT {QuoteID: i, Teacher: i|s, Context: s, Text: s, Unixtime i}
-QuoteSubmissionT {Teacher: i|s, Context: s, Text: s}
-QuoteChangeT {Teacher?: i|s, Context?: s, Text?: s}
 QuoteT {QuoteID: i, Teacher: TeacherT, Context: s, Text: s, Unixtime: i, Upvotes: i}
+TeacherT {TeacherID: i, Name: s, Title: s, Note: s}
 
 ErrorT {error: s}
 
@@ -31,7 +32,7 @@ ErrorT {error: s}
 	// - /submit -> later... TODO: suggest similar
 	// - TODO: /?sortby?=(teachername|time)&page?=i
 
-	POST /api/quotes/submit QuoteSubmissionT
+	POST /api/quotes/submit QuoteInputT
 		=> 200 OK
 		=> 401 Unauthorized
 		=> 400 /*Bad Request*/ ErrorT
@@ -63,7 +64,7 @@ ErrorT {error: s}
 	// - later... TODO: /admin/teacher
 
 	//TODO:
-	PATCH /api/unverifiedquotes/:id QuoteChangeT
+	PUT /api/unverifiedquotes/:id QuoteInputT
 		=> UnverifiedQuoteT
 		=> 400 /*Bad Request*/ ErrorT
 		=> 401 Unauthorized
@@ -85,7 +86,7 @@ ErrorT {error: s}
 		//..
 
 	//TODO:
-	POST /api/teachers TeacherSubmissionT
+	POST /api/teachers TeacherInputT
 		=> 200 OK
 		=> 404 Not Found
 		=> 401 Unauthorized
