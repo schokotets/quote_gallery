@@ -634,7 +634,6 @@ func UpdateUnverifiedQuote(q UnverifiedQuoteT) error {
 
 	// try to find corresponding entry database and overwrite it
 	var res sql.Result
-
 	if q.TeacherID != 0 {
 		res, err = database.Exec(
 			`UPDATE unverifiedQuotes SET TeacherID=$2, TeacherName=$3, Context=$4, Text=$5 WHERE  QuoteID=$1`,
@@ -675,10 +674,14 @@ func DeleteUnverifiedQuote(ID int32) error {
 	}
 
 	// try to find corresponding entry in database and delete it
-	_, err = database.Exec(
+	var res sql.Result
+	res, err = database.Exec(
 		`DELETE FROM unverifiedQuotes WHERE  QuoteID=$1`, ID)
 	if err != nil {
 		return errors.New("DeleteUnverifiedQuote: deleting unverifiedQuote from database failed: " + err.Error())
+	}
+	if rowsAffected, _ := res.RowsAffected(); rowsAffected == 0 {
+		return errors.New("DeleteUnverifiedQuote: could not find specified database row for deleting")
 	}
 
 	return nil
