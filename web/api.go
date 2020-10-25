@@ -3,9 +3,9 @@ package web
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"hash/fnv"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"quote_gallery/database"
 	"strings"
@@ -83,7 +83,7 @@ func handlerAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
 	// Store UnverifiedQuote in database
 	err = database.CreateUnverifiedQuote(quote)
 	if err != nil {
-		if (strings.Contains(err.Error(),`violates foreign key constraint "unverifiedquotes_teacherid_fkey"`)) {
+		if strings.Contains(err.Error(), `violates foreign key constraint "unverifiedquotes_teacherid_fkey"`) {
 			w.WriteHeader(http.StatusBadRequest)
 			fmt.Fprintf(w, "Teacher: no teacher with that ID")
 		} else {
@@ -92,6 +92,14 @@ func handlerAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
 			log.Printf("/api/quotes/submit: quote creation failed with error '%v' for request body '%s' and UnverifiedQuoteT %v", err, bytes, quote)
 		}
 	}
+}
+
+func handlerAPIUnverifiedQuotes(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func handlerAPIUnverifiedQuotesConfirm(w http.ResponseWriter, r *http.Request) {
+
 }
 
 /* -------------------------------------------------------------------------- */

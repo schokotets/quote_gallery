@@ -3,19 +3,27 @@ package web
 import (
 	"log"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
 //SetupRoutes configures which paths are handled by which functions
 func SetupRoutes() {
-	http.HandleFunc("/", pageRoot)
+	rt := mux.NewRouter()
+
+	rt.HandleFunc("/", pageRoot)
 
 	handlerFiles := http.FileServer(http.Dir("./public"))
-	http.Handle("/static/", http.StripPrefix("/static/", handlerFiles))
+	rt.Handle("/static/", http.StripPrefix("/static/", handlerFiles))
 
-	http.HandleFunc("/submit", pageSubmit)
-	http.HandleFunc("/admin/unverifiedquotes", pageAdminUnverifiedQuotes)
+	rt.HandleFunc("/submit", pageSubmit)
+	rt.HandleFunc("/admin/unverifiedquotes", pageAdminUnverifiedQuotes)
+	rt.HandleFunc("/api/quotes/submit", handlerAPIQuotesSubmit)
+	rt.HandleFunc("/api/unverifiedquotes/{id:[0-9]+}", handlerAPIUnverifiedQuotes)
+	rt.HandleFunc("/api/unverifiedquotes/{id:[0-9]+}/confirm", handlerAPIUnverifiedQuotesConfirm)
 
-	http.HandleFunc("/api/quotes/submit", handlerAPIQuotesSubmit)
+	// Direct http handling to gorilla/mux router
+	http.Handle("/", rt)
 }
 
 //StartWebserver runs the go http.ListenAndServe web server
