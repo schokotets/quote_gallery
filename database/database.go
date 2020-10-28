@@ -738,6 +738,16 @@ func GetUnverifiedQuotes() (*[]UnverifiedQuoteT, Status) {
 	globalMutex.MinorLock()
 	defer globalMutex.MinorUnlock()
 
+	// Verify connection to database
+	err := database.Ping()
+	if err != nil {
+		database.Close()
+		return nil, Status{
+			Code:    StatusError,
+			Message: "GetUnverifiedQuotes: pinging database failed: " + err.Error(),
+		}
+	}
+
 	// get all unverifiedQuotes from database
 	rows, err := database.Query(`SELECT
 		QuoteID,
