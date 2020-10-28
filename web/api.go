@@ -210,7 +210,67 @@ func handlerAPIUnverifiedQuotes(w http.ResponseWriter, r *http.Request) {
 }
 
 func handlerAPIUnverifiedQuotesConfirm(w http.ResponseWriter, r *http.Request) {
+	// Check if right http method is used
+	if r.Method != "PUT" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
 
+	id, err := strconv.Atoi(mux.Vars(r)["id"])
+	if err != nil {
+		// This should not happend, because handlerAPIUnverifiedQuotes is only called if
+		// uri pattern is matched, see web.go
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "internal server error")
+		return
+	}
+
+	if id == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "invalid QuoteID: 0")
+		return
+	}
+
+	q, status := database.GetUnverifiedQuoteByID(int32(id))
+
+	switch status.Code {
+	case database.StatusError:
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "internal server error")
+		log.Printf("/api/unverifiedquotes/:id/confirm: getting unverified quotes failed with error '%v'", status.Message)
+		return
+	case database.StatusInvalidQuoteID:
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "unknown QuoteID: %d", id)
+		return
+	}
+
+	if q.TeacherID == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "invalid TeacherID: 0")
+		return
+	}
+
+	status = database.CreateQuote(database.QuoteT{
+		TeacherID: q.TeacherID,
+		Context:   q.Context,
+		Text:      q.Text,
+		Unixtime:  q.Unixtime,
+	})
+
+	switch status.Code {
+	case database.StatusError:
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "internal server error")
+		log.Printf("/api/unverifiedquotes/:id/confirm: quote creation failed with error '%v'", status.Message)
+		return
+	case database.StatusInvalidTeacherID:
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "unknown TeacherID: %d", id)
+		return
+	}
+
+	database.DeleteUnverifiedQuote(int32(id))
 }
 
 /* -------------------------------------------------------------------------- */
