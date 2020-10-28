@@ -424,8 +424,8 @@ func UpdateQuote(q QuoteT) Status {
 		// because the database is the only source of truth, UpdateQuote() should not fail,
 		// so the cache will be reloaded
 
-		log.Print("UpdateQuote: unsafeOverwriteQuoteInCache returned: " + err.Error())
-		log.Print("Cache is out of sync with database, trying to reload")
+		log.Print("DATABASE: UpdateQuote: unsafeOverwriteQuoteInCache returned: " + err.Error())
+		log.Print("DATABASE: Cache is out of sync with database, trying to reload")
 		go Initialize()
 	}
 
@@ -495,8 +495,8 @@ func DeleteQuote(ID int32) Status {
 		// because the database is the only source of truth, UpdateQuote() should not fail,
 		// so the cache will be reloaded
 
-		log.Print("DeleteQuote: unsafeDeleteQuoteFromCache returned: " + err.Error())
-		log.Print("Cache is out of sync with database, trying to reload")
+		log.Print("DATABASE: DeleteQuote: unsafeDeleteQuoteFromCache returned: " + err.Error())
+		log.Print("DATABASE: Cache is out of sync with database, trying to reload")
 		go Initialize()
 	}
 
@@ -638,8 +638,8 @@ func UpdateTeacher(t TeacherT) Status {
 		// because the database is the only source of truth, UpdateTeacher() should not fail,
 		// so the cache will be reloaded
 
-		log.Print("UpdateTeacher: unsafeOverwriteTeacherInCache returned: " + err.Error())
-		log.Print("Cache is out of sync with database, trying to reload")
+		log.Print("DATABASE: UpdateTeacher: unsafeOverwriteTeacherInCache returned: " + err.Error())
+		log.Print("DATABASE: Cache is out of sync with database, trying to reload")
 		go Initialize()
 	}
 
@@ -709,8 +709,8 @@ func DeleteTeacher(ID int32) Status {
 		// because the database is the only source of truth, UpdateQuote() should not fail,
 		// so the cache will be reloaded
 
-		log.Print("DeleteTeacher: unsafeDeleteTeacherFromCache returned: " + err.Error())
-		log.Print("Cache is out of sync with database, trying to reload")
+		log.Print("DATABASE: DeleteTeacher: unsafeDeleteTeacherFromCache returned: " + err.Error())
+		log.Print("DATABASE: Cache is out of sync with database, trying to reload")
 		go Initialize()
 	}
 
@@ -781,6 +781,77 @@ func GetUnverifiedQuotes() (*[]UnverifiedQuoteT, Status) {
 	}
 
 	return &quotes, Status{
+		Code:    StatusOK,
+		Message: "",
+	}
+}
+
+// GetUnverifiedQuoteByID returns a single unverified quote corresponding to the given ID.
+//
+// Possible return states: StatusOK, StatusError, StatusInvalidQuoteID
+func GetUnverifiedQuoteByID(ID int32) (UnverifiedQuoteT, Status) {
+	if database == nil {
+		return UnverifiedQuoteT{}, Status{
+			Code:    StatusError,
+			Message: "GetUnverifiedQuoteByID: not connected to database",
+		}
+	}
+
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
+
+	// Verify connection to database
+	err := database.Ping()
+	if err != nil {
+		database.Close()
+		return UnverifiedQuoteT{}, Status{
+			Code:    StatusError,
+			Message: "GetUnverifiedQuoteByID: pinging database failed: " + err.Error(),
+		}
+	}
+
+	// Query database
+	rows, err := database.Query(`SELECT
+		TeacherID, 
+		TeacherName, 
+		Context,
+		Text,
+		Unixtime,
+		IPHash FROM unverifiedQuotes WHERE QuoteID=$1`, ID)
+	if err != nil {
+		return UnverifiedQuoteT{}, Status{
+			Code:    StatusError,
+			Message: "GetUnverifiedQuoteByID: loading unverifiedQuote from database failed: " + err.Error(),
+		}
+	}
+
+	if rows.Next() == false {
+		// QuoteID not found
+		return UnverifiedQuoteT{}, Status{
+			Code:    StatusInvalidQuoteID,
+			Message: "GetUnverifiedQuoteByID: could not find specified database row for reading",
+		}
+	}
+
+	var q UnverifiedQuoteT
+	var TeacherID sql.NullInt32
+
+	err = rows.Scan(&TeacherID, &q.TeacherName, &q.Context, &q.Text, &q.Unixtime, &q.IPHash)
+	if err != nil {
+		return UnverifiedQuoteT{}, Status{
+			Code:    StatusError,
+			Message: "GetUnverifiedQuoteByID: parsing unverifiedQuotes failed: " + err.Error(),
+		}
+	}
+
+	q.QuoteID = ID
+
+	// TeacherID can be nill, see CreateUnverifiedQuote and UpdateUnverifiedQuote
+	if TeacherID.Valid {
+		q.TeacherID = TeacherID.Int32
+	}
+
+	return q, Status{
 		Code:    StatusOK,
 		Message: "",
 	}
