@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"quote_gallery/database"
 	"strconv"
@@ -83,19 +84,21 @@ func handlerAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
 	quote.IPHash = hash(strings.Split(r.RemoteAddr, ":")[0])
 
 	// Store UnverifiedQuote in database
-	err = database.CreateUnverifiedQuote(quote)
+	status := database.CreateUnverifiedQuote(quote)
 
-	/* ------------------------- MISSING ERROR HANDLING ------------------------- */
-	// if err != nil {
-	// 	if strings.Contains(err.Error(), `violates foreign key constraint`) {
-	// 		w.WriteHeader(http.StatusBadRequest)
-	// 		fmt.Fprintf(w, "Teacher: no teacher with that ID")
-	// 	} else {
-	// 		w.WriteHeader(http.StatusInternalServerError)
-	// 		fmt.Fprintf(w, "internal server error")
-	// 		log.Printf("/api/quotes/submit: quote creation failed with error '%v' for request body '%s' and UnverifiedQuoteT %v", err, bytes, quote)
-	// 	}
-	// }
+	switch status.Code {
+	case database.StatusError:
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "internal server error")
+		log.Printf("/api/quotes/submit: quote creation failed with error '%v' for request body '%s' and UnverifiedQuoteT %v", status.Message, bytes, quote)
+		break
+	case database.StatusInvalidTeacherID:
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Teacher: no teacher with that ID")
+		break
+	}
+
+	return
 }
 
 func handlerAPIUnverifiedQuotes(w http.ResponseWriter, r *http.Request) {
@@ -109,7 +112,7 @@ func handlerAPIUnverifiedQuotes(w http.ResponseWriter, r *http.Request) {
 	}
 	if id == 0 {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "invalid UnverifiedQuoteID: 0")
+		fmt.Fprintf(w, "invalid QuoteID: 0")
 		return
 	}
 
@@ -161,31 +164,48 @@ func handlerAPIUnverifiedQuotes(w http.ResponseWriter, r *http.Request) {
 		quote.Text = subm.Text
 
 		// Update UnverifiedQuote in database
-		err = database.UpdateUnverifiedQuote(quote)
+		status := database.UpdateUnverifiedQuote(quote)
 
-		/* ------------------------- MISSING ERROR HANDLING ------------------------- */
-		// if err != nil {
-		// 	if strings.Contains(err.Error(), `violates foreign key constraint`) {
-		// 		w.WriteHeader(http.StatusBadRequest)
-		// 		fmt.Fprintf(w, "Teacher: no teacher with that ID")
-		// 	} else {
-		// 		w.WriteHeader(http.StatusInternalServerError)
-		// 		fmt.Fprintf(w, "internal server error")
-		// 		log.Printf("/api/unverifiedquotes/:id: quote creation failed with error '%v' for request body '%s' and UnverifiedQuoteT %v", err, bytes, quote)
-		// 	}
-		// }
+		switch status.Code {
+		case database.StatusError:
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "internal server error")
+			log.Printf("/api/unverifiedquotes/:id: quote updating failed with error '%v' for request body '%s' and UnverifiedQuoteT %v", status.Message, bytes, quote)
+			break
+		case database.StatusInvalidTeacherID:
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprintf(w, "unknown TeacherID: %d", quote.TeacherID)
+			break
+		case database.StatusInvalidQuoteID:
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprintf(w, "unknown QuoteID: %d", quote.QuoteID)
+			break
+		}
+
 		break
 
 	case "DELETE":
 
 		// Delete UnverifiedQuote from database
-		err = database.DeleteUnverifiedQuote(int32(id))
+		status := database.DeleteUnverifiedQuote(int32(id))
 
-		/* ------------------------- MISSING ERROR HANDLING ------------------------- */
+		switch status.Code {
+		case database.StatusError:
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "internal server error")
+			log.Printf("/api/unverifiedquotes/:id: quote deletion failed with error '%v'", status.Message)
+			break
+		case database.StatusInvalidQuoteID:
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprintf(w, "unknown QuoteID: %d", id)
+			break
+		}
+
+		break
 
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
+		break
 	}
 }
 

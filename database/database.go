@@ -2,8 +2,8 @@ package database
 
 import (
 	"database/sql"
-	"errors"
 	"log"
+	"strings"
 
 	// loading postgresql driver
 	_ "github.com/lib/pq"
@@ -79,11 +79,13 @@ var globalMutex Mutex = Mutex{0, 0, false}
 /* -------------------------------------------------------------------------- */
 
 // Connect establishes the connection to the PostgresSQL database and therefore
-// needs to be called before any other function of database.go
+// needs to be called before any other function of database.go.
 //
 // Notice: Connect doesn't initialize any tables or the cache, hence Initialize should be called
 // right afterwards.
-func Connect() error {
+//
+// Possible return states: StatusOK, StatusError
+func Connect() Status {
 	globalMutex.MajorLock()
 	defer globalMutex.MajorUnlock()
 
@@ -101,20 +103,31 @@ func Connect() error {
 		dbname=quote_gallery 
 		sslmode=disable`)
 	if err != nil {
-		return errors.New("Connect: connecting to database failed: " + err.Error())
+		return Status{
+			Code:    StatusError,
+			Message: "Connect: connecting to database failed: " + err.Error(),
+		}
 	}
 
-	return nil
+	return Status{
+		Code:    StatusOK,
+		Message: "",
+	}
 }
 
 // Initialize creates all the required tables in database, if they don't already exist
 // and initializes the cache from the database.
 //
 // Therefore it must be called before any other function of database.go despite Connect, which
-// needs to been have called for Initialize to work
-func Initialize() error {
+// needs to been have called for Initialize to work.
+//
+// Possible return states: StatusOK, StatusError
+func Initialize() Status {
 	if database == nil {
-		return errors.New("Initialize: not connected to database")
+		return Status{
+			Code:    StatusError,
+			Message: "Initialize: not connected to database",
+		}
 	}
 
 	globalMutex.MajorLock()
@@ -124,7 +137,10 @@ func Initialize() error {
 	err := database.Ping()
 	if err != nil {
 		database.Close()
-		return errors.New("Initialize: pinging database failed: " + err.Error())
+		return Status{
+			Code:    StatusError,
+			Message: "Initialize: pinging database failed: " + err.Error(),
+		}
 	}
 
 	// Create teachers table in database if it doesn't exist
@@ -137,7 +153,10 @@ func Initialize() error {
 		Note varchar)`)
 	if err != nil {
 		database.Close()
-		return errors.New("Initialize: creating teachers table failed: " + err.Error())
+		return Status{
+			Code:    StatusError,
+			Message: "Initialize: creating teachers table failed: " + err.Error(),
+		}
 	}
 
 	// Create quotes table in database if it doesn't exist
@@ -152,7 +171,10 @@ func Initialize() error {
 		Upvotes integer)`)
 	if err != nil {
 		database.Close()
-		return errors.New("Initialize: creating quotes table failed: " + err.Error())
+		return Status{
+			Code:    StatusError,
+			Message: "Initialize: creating quotes table failed: " + err.Error(),
+		}
 	}
 
 	// Create unverifiedQuotes table in database if it doesn't exist
@@ -168,19 +190,30 @@ func Initialize() error {
 		IPHash bigint)`)
 	if err != nil {
 		database.Close()
-		return errors.New("Initialize: creating unverifiedQuotes table failed: " + err.Error())
+		return Status{
+			Code:    StatusError,
+			Message: "Initialize: creating unverifiedQuotes table failed: " + err.Error(),
+		}
 	}
 
 	unsafeLoadCache()
 
-	return nil
+	return Status{
+		Code:    StatusOK,
+		Message: "",
+	}
 
 }
 
-// CloseAndClearCache closes database and cache
-func CloseAndClearCache() error {
+// CloseAndClearCache closes database and cache.
+//
+// Possible return states: StatusOK, StatusError
+func CloseAndClearCache() Status {
 	if database == nil {
-		return errors.New("CloseAndClearCache: not connected to database")
+		return Status{
+			Code:    StatusError,
+			Message: "CloseAndClearCache: not connected to database",
+		}
 	}
 
 	globalMutex.MajorLock()
@@ -189,59 +222,98 @@ func CloseAndClearCache() error {
 	database.Close()
 	unsafeClearCache()
 
-	return nil
+	return Status{
+		Code:    StatusOK,
+		Message: "",
+	}
 }
 
 // ExecuteQuery runs a query on the database and returns the error
-// This function is to be used in a testing environment
-func ExecuteQuery(query string) error {
+// This function is to be used in a testing environment.
+//
+// Possible return states: StatusOK, StatusError
+func ExecuteQuery(query string) Status {
 	if database == nil {
-		return errors.New("ExecuteQuery: not connected to database")
+		return Status{
+			Code:    StatusError,
+			Message: "ExecuteQuery: not connected to database",
+		}
 	}
 
 	globalMutex.MajorLock()
 	defer globalMutex.MajorUnlock()
 
 	_, err := database.Exec(query)
-	return err
+
+	if err != nil {
+		return Status{
+			Code:    StatusError,
+			Message: "ExecuteQuery: Exec failed: " + err.Error(),
+		}
+	}
+	return Status{
+		Code:    StatusOK,
+		Message: "",
+	}
 }
 
 /* -------------------------------------------------------------------------- */
 /*                          EXPORTED QUOTES FUNCTIONS                         */
 /* -------------------------------------------------------------------------- */
 
-// GetQuotes returns a slice containing all quotes
-// The weight variable will be zero
-func GetQuotes() (*[]QuoteT, error) {
+// GetQuotes returns a slice containing all quotes.
+// The weight variable will be zero.
+//
+// Possible return states: StatusOK, StatusError
+func GetQuotes() (*[]QuoteT, Status) {
 	if database == nil {
-		return nil, errors.New("GetQuotes: not connected to database")
+		return nil, Status{
+			Code:    StatusError,
+			Message: "GetQuotes: not connected to database",
+		}
 	}
 
 	globalMutex.MinorLock()
 	defer globalMutex.MinorUnlock()
 
 	// get quotes from cache
-	return unsafeGetQuotesFromCache(), nil
+	return unsafeGetQuotesFromCache(), Status{
+		Code:    StatusOK,
+		Message: "",
+	}
 }
 
-// GetQuotesByString returns a slice containing all quotes
-// The weight variable will indicate how well the given text matches the corresponding quote
-func GetQuotesByString(text string) (*[]QuoteT, error) {
+// GetQuotesByString returns a slice containing all quotes.
+// The weight variable will indicate how well the given text matches the corresponding quote.
+//
+// Possible return states: StatusOK, StatusError
+func GetQuotesByString(text string) (*[]QuoteT, Status) {
 	if database == nil {
-		return nil, errors.New("GetQuotesByString: not connected to database")
+		return nil, Status{
+			Code:    StatusError,
+			Message: "GetQuotesByString: not connected to database",
+		}
 	}
 
 	globalMutex.MinorLock()
 	defer globalMutex.MinorUnlock()
 
 	// get weighted quotes from cache
-	return unsafeGetQuotesByStringFromCache(text), nil
+	return unsafeGetQuotesByStringFromCache(text), Status{
+		Code:    StatusOK,
+		Message: "",
+	}
 }
 
-// CreateQuote creates a new quote
-func CreateQuote(q QuoteT) error {
+// CreateQuote creates a new quote.
+//
+// Possible return states: StatusOK, StatusError, StatusInvalidTeacherID
+func CreateQuote(q QuoteT) Status {
 	if database == nil {
-		return errors.New("CreateQuote: not connected to database")
+		return Status{
+			Code:    StatusError,
+			Message: "CreateQuote: not connected to database",
+		}
 	}
 
 	globalMutex.MajorLock()
@@ -253,7 +325,10 @@ func CreateQuote(q QuoteT) error {
 	err = database.Ping()
 	if err != nil {
 		database.Close()
-		return errors.New("CreateQuote: pinging database failed: " + err.Error())
+		return Status{
+			Code:    StatusError,
+			Message: "CreateQuote: pinging database failed: " + err.Error(),
+		}
 	}
 
 	// add quote to database
@@ -261,26 +336,46 @@ func CreateQuote(q QuoteT) error {
 		`INSERT INTO quotes (TeacherID, Context, Text, Unixtime, Upvotes) VALUES ($1, $2, $3, $4, $5) RETURNING QuoteID`,
 		q.TeacherID, q.Context, q.Text, q.Unixtime, q.Upvotes).Scan(&q.QuoteID)
 	if err != nil {
-		return errors.New("CreateQuote: inserting quote into database failed: " + err.Error())
+		if strings.Contains(err.Error(), `violates foreign key constraint`) {
+			return Status{
+				Code:    StatusInvalidTeacherID,
+				Message: "CreateQuote: inserting quote into database failed: " + err.Error(),
+			}
+		}
+		return Status{
+			Code:    StatusError,
+			Message: "CreateQuote: inserting quote into database failed: " + err.Error(),
+		}
 	}
 
 	// add quote to cache
 	unsafeAddQuoteToCache(q)
 
-	return nil
+	return Status{
+		Code:    StatusOK,
+		Message: "",
+	}
 }
 
-// UpdateQuote updates an existing quote by given QuoteID
-// Upvotes and Unixtime fields will be ignored
-func UpdateQuote(q QuoteT) error {
+// UpdateQuote updates an existing quote by given QuoteID.
+// Upvotes and Unixtime fields will be ignored.
+//
+// Possible return states: StatusOK, StatusError, StatusInvalidTeacherID, StatusInvalidQuoteID
+func UpdateQuote(q QuoteT) Status {
 	if database == nil {
-		return errors.New("UpdateQuote: not connected to database")
+		return Status{
+			Code:    StatusError,
+			Message: "UpdateQuote: not connected to database",
+		}
 	}
 
 	var err error
 
 	if q.QuoteID == 0 {
-		return errors.New("UpdateQuote: QuoteID is zero")
+		return Status{
+			Code:    StatusInvalidQuoteID,
+			Message: "UpdateQuote: QuoteID is zero",
+		}
 	}
 
 	globalMutex.MajorLock()
@@ -290,7 +385,10 @@ func UpdateQuote(q QuoteT) error {
 	err = database.Ping()
 	if err != nil {
 		database.Close()
-		return errors.New("UpdateQuote: pinging database failed: " + err.Error())
+		return Status{
+			Code:    StatusError,
+			Message: "UpdateQuote: pinging database failed: " + err.Error(),
+		}
 	}
 
 	// try to find corresponding entry in database and overwrite it
@@ -299,10 +397,22 @@ func UpdateQuote(q QuoteT) error {
 		`UPDATE quotes SET TeacherID=$2, Context=$3, Text=$4 WHERE QuoteID=$1`,
 		q.QuoteID, q.TeacherID, q.Context, q.Text)
 	if err != nil {
-		return errors.New("UpdateQuote: updating quote in database failed: " + err.Error())
+		if strings.Contains(err.Error(), `violates foreign key constraint`) {
+			return Status{
+				Code:    StatusInvalidTeacherID,
+				Message: "UpdateQuote: updating quote in database failed: " + err.Error(),
+			}
+		}
+		return Status{
+			Code:    StatusError,
+			Message: "UpdateQuote: updating quote in database failed: " + err.Error(),
+		}
 	}
 	if rowsAffected, _ := res.RowsAffected(); rowsAffected == 0 {
-		return errors.New("UpdateQuote: could not find specified database row for updating")
+		return Status{
+			Code:    StatusInvalidQuoteID,
+			Message: "UpdateQuote: could not find specified database row for updating",
+		}
 	}
 
 	// try to find corresponding entry in cache and overwrite it
@@ -314,25 +424,36 @@ func UpdateQuote(q QuoteT) error {
 		// because the database is the only source of truth, UpdateQuote() should not fail,
 		// so the cache will be reloaded
 
-		log.Panic("UpdateQuote: unsafeOverwriteQuoteInCache returned: " + err.Error())
-		log.Panic("Cache is out of sync with database, trying to reload")
+		log.Print("UpdateQuote: unsafeOverwriteQuoteInCache returned: " + err.Error())
+		log.Print("Cache is out of sync with database, trying to reload")
 		go Initialize()
 	}
 
-	return nil
+	return Status{
+		Code:    StatusOK,
+		Message: "",
+	}
 }
 
-// DeleteQuote deletes the quote corresponding to the given ID from the database and the quotes slice
-// It will also modifiy the words map
-func DeleteQuote(ID int32) error {
+// DeleteQuote deletes the quote corresponding to the given ID from the database and the quotes slice.
+// It will also modifiy the words map.
+//
+// Possible return states: StatusOK, StatusError, StatusInvalidQuoteID
+func DeleteQuote(ID int32) Status {
 	if database == nil {
-		return errors.New("DeleteQuote: not connected to database")
+		return Status{
+			Code:    StatusError,
+			Message: "DeleteQuote: not connected to database",
+		}
 	}
 
 	var err error
 
 	if ID == 0 {
-		return errors.New("DeleteQuote: ID is zero")
+		return Status{
+			Code:    StatusInvalidQuoteID,
+			Message: "DeleteQuote: ID is zero",
+		}
 	}
 
 	globalMutex.MajorLock()
@@ -342,7 +463,10 @@ func DeleteQuote(ID int32) error {
 	err = database.Ping()
 	if err != nil {
 		database.Close()
-		return errors.New("DeleteQuote: pinging database failed: " + err.Error())
+		return Status{
+			Code:    StatusError,
+			Message: "DeleteQuote: pinging database failed: " + err.Error(),
+		}
 	}
 
 	// try to find corresponding entry in database and delete it
@@ -350,10 +474,16 @@ func DeleteQuote(ID int32) error {
 	res, err = database.Exec(
 		`DELETE FROM quotes WHERE QuoteID=$1`, ID)
 	if err != nil {
-		return errors.New("DeleteQuote: deleting quote from database failed: " + err.Error())
+		return Status{
+			Code:    StatusError,
+			Message: "DeleteQuote: deleting quote from database failed: " + err.Error(),
+		}
 	}
 	if rowsAffected, _ := res.RowsAffected(); rowsAffected == 0 {
-		return errors.New("UpdateQuote: could not find specified database row for deleting")
+		return Status{
+			Code:    StatusInvalidQuoteID,
+			Message: "UpdateQuote: could not find specified database row for deleting",
+		}
 	}
 
 	// try to find corresponding entry in cache and overwrite it
@@ -365,36 +495,52 @@ func DeleteQuote(ID int32) error {
 		// because the database is the only source of truth, UpdateQuote() should not fail,
 		// so the cache will be reloaded
 
-		log.Panic("DeleteQuote: unsafeDeleteQuoteFromCache returned: " + err.Error())
-		log.Panic("Cache is out of sync with database, trying to reload")
+		log.Print("DeleteQuote: unsafeDeleteQuoteFromCache returned: " + err.Error())
+		log.Print("Cache is out of sync with database, trying to reload")
 		go Initialize()
 	}
 
-	return nil
+	return Status{
+		Code:    StatusOK,
+		Message: "",
+	}
 }
 
 /* -------------------------------------------------------------------------- */
 /*                         EXPORTED TEACHERS FUNCTIONS                        */
 /* -------------------------------------------------------------------------- */
 
-// GetTeachers returns a slice containing all teachers
-// The returned slice is not sorted
-func GetTeachers() (*[]TeacherT, error) {
+// GetTeachers returns a slice containing all teachers.
+// The returned slice is not sorted.
+//
+// Possible return states: StatusOK, StatusError
+func GetTeachers() (*[]TeacherT, Status) {
 	if database == nil {
-		return nil, errors.New("GetTeachers: not connected to database")
+		return nil, Status{
+			Code:    StatusError,
+			Message: "GetTeachers: not connected to database",
+		}
 	}
 
 	globalMutex.MinorLock()
 	defer globalMutex.MinorUnlock()
 
 	// get teachers from cache
-	return unsafeGetTeachersFromCache(), nil
+	return unsafeGetTeachersFromCache(), Status{
+		Code:    StatusOK,
+		Message: "",
+	}
 }
 
-// CreateTeacher creates a new teacher
-func CreateTeacher(t TeacherT) error {
+// CreateTeacher creates a new teacher.
+//
+// Possible return states: StatusOK, StatusError
+func CreateTeacher(t TeacherT) Status {
 	if database == nil {
-		return errors.New("CreateTeacher: not connected to database")
+		return Status{
+			Code:    StatusError,
+			Message: "CreateTeacher: not connected to database",
+		}
 	}
 
 	globalMutex.MajorLock()
@@ -406,7 +552,10 @@ func CreateTeacher(t TeacherT) error {
 	err = database.Ping()
 	if err != nil {
 		database.Close()
-		return errors.New("CreateTeacher: pinging database failed: " + err.Error())
+		return Status{
+			Code:    StatusError,
+			Message: "CreateTeacher: pinging database failed: " + err.Error(),
+		}
 	}
 
 	// add teacher to database
@@ -414,25 +563,39 @@ func CreateTeacher(t TeacherT) error {
 		`INSERT INTO teachers (Name, Title, Note) VALUES ($1, $2, $3) RETURNING TeacherID`,
 		t.Name, t.Title, t.Note).Scan(&t.TeacherID)
 	if err != nil {
-		return errors.New("CreateTeacher: inserting teacher into database failed: " + err.Error())
+		return Status{
+			Code:    StatusError,
+			Message: "CreateTeacher: inserting teacher into database failed: " + err.Error(),
+		}
 	}
 
 	// add teacher to cache
 	unsafeAddTeacherToCache(t)
 
-	return nil
+	return Status{
+		Code:    StatusOK,
+		Message: "",
+	}
 }
 
-// UpdateTeacher updates a teacher by given TeacherID
-func UpdateTeacher(t TeacherT) error {
+// UpdateTeacher updates a teacher by given TeacherID.
+//
+// Possible return states: StatusOK, StatusError, StatusInvalidTeacherID
+func UpdateTeacher(t TeacherT) Status {
 	if database == nil {
-		return errors.New("UpdateTeacher: not connected to database")
+		return Status{
+			Code:    StatusError,
+			Message: "UpdateTeacher: not connected to database",
+		}
 	}
 
 	var err error
 
 	if t.TeacherID == 0 {
-		return errors.New("UpdateTeacher: TeacherID is zero")
+		return Status{
+			Code:    StatusInvalidTeacherID,
+			Message: "UpdateTeacher: TeacherID is zero",
+		}
 	}
 
 	globalMutex.MajorLock()
@@ -442,7 +605,10 @@ func UpdateTeacher(t TeacherT) error {
 	err = database.Ping()
 	if err != nil {
 		database.Close()
-		return errors.New("UpdateTeacher: pinging database failed: " + err.Error())
+		return Status{
+			Code:    StatusError,
+			Message: "UpdateTeacher: pinging database failed: " + err.Error(),
+		}
 	}
 
 	// try to find corresponding entry in database and overwrite it
@@ -451,10 +617,16 @@ func UpdateTeacher(t TeacherT) error {
 		`UPDATE teachers SET Name=$2, Title=$3, Note=$4 WHERE TeacherID=$1`,
 		t.TeacherID, t.Name, t.Title, t.Note)
 	if err != nil {
-		return errors.New("UpdateTeacher: updating teacher in database failed: " + err.Error())
+		return Status{
+			Code:    StatusError,
+			Message: "UpdateTeacher: updating teacher in database failed: " + err.Error(),
+		}
 	}
 	if rowsAffected, _ := res.RowsAffected(); rowsAffected == 0 {
-		return errors.New("UpdateTeacher: could not find specified database row for updating")
+		return Status{
+			Code:    StatusInvalidTeacherID,
+			Message: "UpdateTeacher: could not find specified database row for updating",
+		}
 	}
 
 	// try to find corresponding entry in cache and overwrite it
@@ -466,25 +638,36 @@ func UpdateTeacher(t TeacherT) error {
 		// because the database is the only source of truth, UpdateTeacher() should not fail,
 		// so the cache will be reloaded
 
-		log.Panic("UpdateTeacher: unsafeOverwriteTeacherInCache returned: " + err.Error())
-		log.Panic("Cache is out of sync with database, trying to reload")
+		log.Print("UpdateTeacher: unsafeOverwriteTeacherInCache returned: " + err.Error())
+		log.Print("Cache is out of sync with database, trying to reload")
 		go Initialize()
 	}
 
-	return nil
+	return Status{
+		Code:    StatusOK,
+		Message: "",
+	}
 }
 
-// DeleteTeacher deletes the teacher corresponding to the given ID from the database and the teachers slice
-// It will delete all corresponding quotes
-func DeleteTeacher(ID int32) error {
+// DeleteTeacher deletes the teacher corresponding to the given ID from the database and the teachers slice.
+// It will delete all corresponding quotes.
+//
+// Possible return states: StatusOK, StatusError, StatusInvalidTeacherID
+func DeleteTeacher(ID int32) Status {
 	if database == nil {
-		return errors.New("DeleteTeacher: not connected to database")
+		return Status{
+			Code:    StatusError,
+			Message: "DeleteTeacher: not connected to database",
+		}
 	}
 
 	var err error
 
 	if ID == 0 {
-		return errors.New("DeleteTeacher: ID is zero")
+		return Status{
+			Code:    StatusInvalidTeacherID,
+			Message: "DeleteTeacher: ID is zero",
+		}
 	}
 
 	globalMutex.MajorLock()
@@ -494,7 +677,10 @@ func DeleteTeacher(ID int32) error {
 	err = database.Ping()
 	if err != nil {
 		database.Close()
-		return errors.New("DeleteTeacher: pinging database failed: " + err.Error())
+		return Status{
+			Code:    StatusError,
+			Message: "DeleteTeacher: pinging database failed: " + err.Error(),
+		}
 	}
 
 	// try to find corresponding entry in database and delete it
@@ -502,10 +688,16 @@ func DeleteTeacher(ID int32) error {
 	res, err = database.Exec(
 		`DELETE FROM teachers WHERE TeacherID=$1`, ID)
 	if err != nil {
-		return errors.New("DeleteTeacher: deleting teacher from database failed: " + err.Error())
+		return Status{
+			Code:    StatusError,
+			Message: "DeleteTeacher: deleting teacher from database failed: " + err.Error(),
+		}
 	}
 	if rowsAffected, _ := res.RowsAffected(); rowsAffected == 0 {
-		return errors.New("DeleteTeacher: could not find specified database row for deleting")
+		return Status{
+			Code:    StatusInvalidTeacherID,
+			Message: "DeleteTeacher: could not find specified database row for deleting",
+		}
 	}
 
 	// try to find corresponding entry in cache and overwrite it
@@ -517,22 +709,30 @@ func DeleteTeacher(ID int32) error {
 		// because the database is the only source of truth, UpdateQuote() should not fail,
 		// so the cache will be reloaded
 
-		log.Panic("DeleteTeacher: unsafeDeleteTeacherFromCache returned: " + err.Error())
-		log.Panic("Cache is out of sync with database, trying to reload")
+		log.Print("DeleteTeacher: unsafeDeleteTeacherFromCache returned: " + err.Error())
+		log.Print("Cache is out of sync with database, trying to reload")
 		go Initialize()
 	}
 
-	return nil
+	return Status{
+		Code:    StatusOK,
+		Message: "",
+	}
 }
 
 /* -------------------------------------------------------------------------- */
 /*                    EXPORTED UNVERIFIED QUOTES FUNCTIONS                    */
 /* -------------------------------------------------------------------------- */
 
-// GetUnverifiedQuotes returns a slice containing all unverified quotes
-func GetUnverifiedQuotes() (*[]UnverifiedQuoteT, error) {
+// GetUnverifiedQuotes returns a slice containing all unverified quotes.
+//
+// Possible return states: StatusOK, StatusError
+func GetUnverifiedQuotes() (*[]UnverifiedQuoteT, Status) {
 	if database == nil {
-		return nil, errors.New("GetUnverifiedQuotes: not connected to database")
+		return nil, Status{
+			Code:    StatusError,
+			Message: "GetUnverifiedQuotes: not connected to database",
+		}
 	}
 
 	globalMutex.MinorLock()
@@ -548,7 +748,10 @@ func GetUnverifiedQuotes() (*[]UnverifiedQuoteT, error) {
 		Unixtime,
 		IPHash FROM unverifiedQuotes`)
 	if err != nil {
-		return nil, errors.New("GetUnverifiedQuotes: loading unverifiedQuotes from database failed: " + err.Error())
+		return nil, Status{
+			Code:    StatusError,
+			Message: "GetUnverifiedQuotes: loading unverifiedQuotes from database failed: " + err.Error(),
+		}
 	}
 
 	var quotes []UnverifiedQuoteT
@@ -562,7 +765,10 @@ func GetUnverifiedQuotes() (*[]UnverifiedQuoteT, error) {
 
 		err := rows.Scan(&q.QuoteID, &TeacherID, &q.TeacherName, &q.Context, &q.Text, &q.Unixtime, &q.IPHash)
 		if err != nil {
-			return nil, errors.New("GetUnverifiedQuotes: parsing unverifiedQuotes failed: " + err.Error())
+			return nil, Status{
+				Code:    StatusError,
+				Message: "GetUnverifiedQuotes: parsing unverifiedQuotes failed: " + err.Error(),
+			}
 		}
 
 		// TeacherID can be nill, see CreateUnverifiedQuote and UpdateUnverifiedQuote
@@ -574,13 +780,21 @@ func GetUnverifiedQuotes() (*[]UnverifiedQuoteT, error) {
 		quotes = append(quotes, q)
 	}
 
-	return &quotes, nil
+	return &quotes, Status{
+		Code:    StatusOK,
+		Message: "",
+	}
 }
 
-// CreateUnverifiedQuote stores an unverified quote
-func CreateUnverifiedQuote(q UnverifiedQuoteT) error {
+// CreateUnverifiedQuote stores an unverified quote.
+//
+// Possible return states: StatusOK, StatusError, StatusInvalidTeacherID
+func CreateUnverifiedQuote(q UnverifiedQuoteT) Status {
 	if database == nil {
-		return errors.New("CreateUnverifiedQuote: not connected to database")
+		return Status{
+			Code:    StatusError,
+			Message: "CreateUnverifiedQuote: not connected to database",
+		}
 	}
 
 	globalMutex.MinorLock()
@@ -592,7 +806,10 @@ func CreateUnverifiedQuote(q UnverifiedQuoteT) error {
 	err = database.Ping()
 	if err != nil {
 		database.Close()
-		return errors.New("CreateUnverifiedQuote: pinging database failed: " + err.Error())
+		return Status{
+			Code:    StatusError,
+			Message: "CreateUnverifiedQuote: pinging database failed: " + err.Error(),
+		}
 	}
 
 	// add quote to database
@@ -601,25 +818,45 @@ func CreateUnverifiedQuote(q UnverifiedQuoteT) error {
 			`INSERT INTO unverifiedQuotes (TeacherID, TeacherName, Context, Text, Unixtime, IPHash) VALUES ($1, $2, $3, $4, $5, $6)`,
 			q.TeacherID, q.TeacherName, q.Context, q.Text, q.Unixtime, q.IPHash)
 		if err != nil {
-			return errors.New("CreateUnverifiedQuote: inserting quote into database failed: " + err.Error())
+			if strings.Contains(err.Error(), `violates foreign key constraint`) {
+				return Status{
+					Code:    StatusInvalidTeacherID,
+					Message: "CreateUnverifiedQuote: inserting quote into database failed: " + err.Error(),
+				}
+			}
+			return Status{
+				Code:    StatusError,
+				Message: "CreateUnverifiedQuote: inserting quote into database failed: " + err.Error(),
+			}
 		}
 	} else {
 		_, err = database.Exec(
 			`INSERT INTO unverifiedQuotes (TeacherID, TeacherName, Context, Text, Unixtime, IPHash) VALUES ($1, $2, $3, $4, $5, $6)`,
 			nil, q.TeacherName, q.Context, q.Text, q.Unixtime, q.IPHash)
 		if err != nil {
-			return errors.New("CreateUnverifiedQuote: inserting quote into database failed: " + err.Error())
+			return Status{
+				Code:    StatusError,
+				Message: "CreateUnverifiedQuote: inserting quote into database failed: " + err.Error(),
+			}
 		}
 	}
 
-	return nil
+	return Status{
+		Code:    StatusOK,
+		Message: "",
+	}
 }
 
-// UpdateUnverifiedQuote updates an unverified quote
-// IPHash and Unixtime fields will be ignored
-func UpdateUnverifiedQuote(q UnverifiedQuoteT) error {
+// UpdateUnverifiedQuote updates an unverified quote.
+// IPHash and Unixtime fields will be ignored.
+//
+// Possible return states: StatusOk, StatusError, StatusInvalidTeacherID, StatusInvalidQuoteID
+func UpdateUnverifiedQuote(q UnverifiedQuoteT) Status {
 	if database == nil {
-		return errors.New("UpdateUnverifiedQuote: not connected to database")
+		return Status{
+			Code:    StatusError,
+			Message: "UpdateUnverifiedQuote: not connected to database",
+		}
 	}
 
 	globalMutex.MinorLock()
@@ -629,7 +866,10 @@ func UpdateUnverifiedQuote(q UnverifiedQuoteT) error {
 	err := database.Ping()
 	if err != nil {
 		database.Close()
-		return errors.New("UpdateUnverifiedQuote: pinging database failed: " + err.Error())
+		return Status{
+			Code:    StatusError,
+			Message: "UpdateUnverifiedQuote: pinging database failed: " + err.Error(),
+		}
 	}
 
 	// try to find corresponding entry database and overwrite it
@@ -639,28 +879,51 @@ func UpdateUnverifiedQuote(q UnverifiedQuoteT) error {
 			`UPDATE unverifiedQuotes SET TeacherID=$2, TeacherName=$3, Context=$4, Text=$5 WHERE  QuoteID=$1`,
 			q.QuoteID, q.TeacherID, q.TeacherName, q.Context, q.Text)
 		if err != nil {
-			return errors.New("UpdateUnverifiedQuote: updating unverifiedQuote in database failed: " + err.Error())
+			if strings.Contains(err.Error(), `violates foreign key constraint`) {
+				return Status{
+					Code:    StatusInvalidTeacherID,
+					Message: "UpdateUnverifiedQuote: updating unverifiedQuote in database failed: " + err.Error(),
+				}
+			}
+			return Status{
+				Code:    StatusError,
+				Message: "UpdateUnverifiedQuote: updating unverifiedQuote in database failed: " + err.Error(),
+			}
 		}
 	} else {
 		res, err = database.Exec(
 			`UPDATE unverifiedQuotes SET TeacherID=$2, TeacherName=$3, Context=$4, Text=$5 WHERE  QuoteID=$1`,
 			q.QuoteID, nil, q.TeacherName, q.Context, q.Text)
 		if err != nil {
-			return errors.New("UpdateUnverifiedQuote: updating unverifiedQuote in database failed: " + err.Error())
+			return Status{
+				Code:    StatusError,
+				Message: "UpdateUnverifiedQuote: updating unverifiedQuote in database failed: " + err.Error(),
+			}
 		}
 	}
 
 	if rowsAffected, _ := res.RowsAffected(); rowsAffected == 0 {
-		return errors.New("UpdateUnverifiedQuote: could not find specified database row for updating")
+		return Status{
+			Code:    StatusInvalidQuoteID,
+			Message: "UpdateUnverifiedQuote: could not find specified database row for updating",
+		}
 	}
 
-	return nil
+	return Status{
+		Code:    StatusOK,
+		Message: "",
+	}
 }
 
-// DeleteUnverifiedQuote deletes an unverified quote
-func DeleteUnverifiedQuote(ID int32) error {
+// DeleteUnverifiedQuote deletes an unverified quote.
+//
+// Possible return states: StatusOK, StatusError, StatusInvalidQuoteID
+func DeleteUnverifiedQuote(ID int32) Status {
 	if database == nil {
-		return errors.New("DeleteUnverifiedQuote: not connected to database")
+		return Status{
+			Code:    StatusError,
+			Message: "DeleteUnverifiedQuote: not connected to database",
+		}
 	}
 
 	globalMutex.MinorLock()
@@ -670,7 +933,10 @@ func DeleteUnverifiedQuote(ID int32) error {
 	err := database.Ping()
 	if err != nil {
 		database.Close()
-		return errors.New("DeleteUnverifiedQuote: pinging database failed: " + err.Error())
+		return Status{
+			Code:    StatusError,
+			Message: "DeleteUnverifiedQuote: pinging database failed: " + err.Error(),
+		}
 	}
 
 	// try to find corresponding entry in database and delete it
@@ -678,11 +944,20 @@ func DeleteUnverifiedQuote(ID int32) error {
 	res, err = database.Exec(
 		`DELETE FROM unverifiedQuotes WHERE  QuoteID=$1`, ID)
 	if err != nil {
-		return errors.New("DeleteUnverifiedQuote: deleting unverifiedQuote from database failed: " + err.Error())
+		return Status{
+			Code:    StatusError,
+			Message: "DeleteUnverifiedQuote: deleting unverifiedQuote from database failed: " + err.Error(),
+		}
 	}
 	if rowsAffected, _ := res.RowsAffected(); rowsAffected == 0 {
-		return errors.New("DeleteUnverifiedQuote: could not find specified database row for deleting")
+		return Status{
+			Code:    StatusInvalidQuoteID,
+			Message: "DeleteUnverifiedQuote: could not find specified database row for deleting",
+		}
 	}
 
-	return nil
+	return Status{
+		Code:    StatusOK,
+		Message: "",
+	}
 }
