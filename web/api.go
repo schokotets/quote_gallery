@@ -156,6 +156,7 @@ func handlerAPIUnverifiedQuotes(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		quote.QuoteID = int32(id)
 		quote.Context = subm.Context
 		quote.Text = subm.Text
 
