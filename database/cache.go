@@ -142,6 +142,8 @@ func unsafeClearCache() {
 // using addQuoteToCache without checking if q.QuoteID already exists may be fatal
 func unsafeAddQuoteToCache(q QuoteT) error {
 
+	q.Match = 0
+
 	cache.quoteSlice = append(cache.quoteSlice, q)
 	enumID := int32(len(cache.quoteSlice) - 1)
 
