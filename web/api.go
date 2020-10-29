@@ -25,6 +25,12 @@ type quoteInputT struct {
 	Text    string
 }
 
+type teacherInputT struct {
+	Name  string
+	Title string
+	Note  string
+}
+
 /* -------------------------------------------------------------------------- */
 /*                           EXPORTED API FUNCTIONS                           */
 /* -------------------------------------------------------------------------- */
@@ -101,7 +107,7 @@ func handlerAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func handlerAPIUnverifiedQuotes(w http.ResponseWriter, r *http.Request) {
+func handlerAPIUnverifiedQuotesID(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(mux.Vars(r)["id"])
 	if err != nil {
 		// This should not happend, because handlerAPIUnverifiedQuotes is only called if
@@ -209,7 +215,7 @@ func handlerAPIUnverifiedQuotes(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func handlerAPIUnverifiedQuotesConfirm(w http.ResponseWriter, r *http.Request) {
+func handlerAPIUnverifiedQuotesIDConfirm(w http.ResponseWriter, r *http.Request) {
 	// Check if right http method is used
 	if r.Method != "PUT" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -271,6 +277,114 @@ func handlerAPIUnverifiedQuotesConfirm(w http.ResponseWriter, r *http.Request) {
 	}
 
 	database.DeleteUnverifiedQuote(int32(id))
+}
+
+func handlerAPITeachers(w http.ResponseWriter, r *http.Request) {
+	// Check if right http method is used
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	var subm teacherInputT
+	var teacher database.TeacherT
+
+	// parse json request body into temporary QuoteInput
+	bytes, _ := ioutil.ReadAll(r.Body)
+	err := json.Unmarshal(bytes, &subm)
+
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "unparsable JSON")
+		return
+	}
+
+	if len(subm.Name) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Name is empty")
+		return
+	}
+
+	if len(subm.Title) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Title is empty")
+		return
+	}
+
+	teacher.Name = subm.Name
+	teacher.Title = subm.Title
+	teacher.Note = subm.Note
+
+	status := database.CreateTeacher(teacher)
+
+	if status.Code != database.StatusOK {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "internal server error")
+		log.Printf("/api/teachers: creating teacher failed with error '%v' for request body '%s' and TeacherT %v", status.Message, bytes, teacher)
+		return
+	}
+}
+
+func handlerAPITeachersID(w http.ResponseWriter, r *http.Request) {
+	// Check if right http method is used
+	if r.Method != "PUT" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	id, err := strconv.Atoi(mux.Vars(r)["id"])
+	if err != nil {
+		// This should not happend, because handlerAPIUnverifiedQuotes is only called if
+		// uri pattern is matched, see web.go
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "internal server error")
+		return
+	}
+
+	if id == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "invalid TeacherID: 0")
+		return
+	}
+
+	var subm teacherInputT
+	var teacher database.TeacherT
+
+	// parse json request body into temporary QuoteInput
+	bytes, _ := ioutil.ReadAll(r.Body)
+	err = json.Unmarshal(bytes, &subm)
+
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "unparsable JSON")
+		return
+	}
+
+	if len(subm.Name) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Name is empty")
+		return
+	}
+
+	if len(subm.Title) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Title is empty")
+		return
+	}
+
+	teacher.TeacherID = int32(id)
+	teacher.Name = subm.Name
+	teacher.Title = subm.Title
+	teacher.Note = subm.Note
+
+	status := database.UpdateTeacher(teacher)
+
+	if status.Code != database.StatusOK {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "internal server error")
+		log.Printf("/api/teachers: updating teacher failed with error '%v' for request body '%s' and TeacherT %v", status.Message, bytes, teacher)
+		return
+	}
 }
 
 /* -------------------------------------------------------------------------- */

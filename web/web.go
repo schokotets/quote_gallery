@@ -19,8 +19,10 @@ func SetupRoutes() {
 	rt.HandleFunc("/submit", pageSubmit)
 	rt.HandleFunc("/admin/unverifiedquotes", pageAdminUnverifiedQuotes)
 	rt.HandleFunc("/api/quotes/submit", handlerAPIQuotesSubmit)
-	rt.HandleFunc("/api/unverifiedquotes/{id:[0-9]+}", handlerAPIUnverifiedQuotes)
-	rt.HandleFunc("/api/unverifiedquotes/{id:[0-9]+}/confirm", handlerAPIUnverifiedQuotesConfirm)
+	rt.HandleFunc("/api/unverifiedquotes/{id:[0-9]+}", handlerAPIUnverifiedQuotesID)
+	rt.HandleFunc("/api/unverifiedquotes/{id:[0-9]+}/confirm", handlerAPIUnverifiedQuotesIDConfirm)
+	rt.HandleFunc("/api/teachers", handlerAPITeachers)
+	rt.HandleFunc("/api/teachers/{id:[0-9]+}", handlerAPITeachersID)
 
 	// Direct http handling to gorilla/mux router
 	http.Handle("/", rt)
