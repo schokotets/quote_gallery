@@ -14,7 +14,7 @@ func SetupRoutes() {
 	rt.HandleFunc("/", pageRoot)
 
 	handlerFiles := http.FileServer(http.Dir("./public"))
-	rt.Handle("/static/", http.StripPrefix("/static/", handlerFiles))
+	rt.PathPrefix("/static/").Handler(http.StripPrefix("/static/", handlerFiles))
 
 	rt.HandleFunc("/submit", pageSubmit)
 	rt.HandleFunc("/admin/unverifiedquotes", pageAdminUnverifiedQuotes)
