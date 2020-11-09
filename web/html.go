@@ -15,8 +15,8 @@ func pageRoot(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "404 Not Found")
 		return
 	}
-	quotes, status := database.GetQuotes()
-	if status.Code != database.StatusOK {
+	quotes, err := database.GetQuotes()
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

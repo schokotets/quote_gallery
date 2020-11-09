@@ -90,21 +90,20 @@ func handlerAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
 	quote.IPHash = hash(strings.Split(r.RemoteAddr, ":")[0])
 
 	// Store UnverifiedQuote in database
-	status := database.CreateUnverifiedQuote(quote)
+	err = database.CreateUnverifiedQuote(quote)
 
-	switch status.Code {
-	case database.StatusError:
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "internal server error")
-		log.Printf("/api/quotes/submit: quote creation failed with error '%v' for request body '%s' and UnverifiedQuoteT %v", status.Message, bytes, quote)
-		break
-	case database.StatusInvalidTeacherID:
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Teacher: no teacher with that ID")
-		break
+	if err != nil {
+		switch err.(type) {
+		case database.InvalidTeacherIDError:
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, "Teacher: no teacher with that ID")
+		default:
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "internal server error")
+			log.Printf("/api/quotes/submit: quote creation failed with error '%s' for request body '%s' and UnverifiedQuoteT %v", err.Error(), bytes, quote)
+		}
 	}
-
-	return
+	//TODO missing w.WriteHeader(http.StatusOK)?
 }
 
 func handlerAPIUnverifiedQuotesID(w http.ResponseWriter, r *http.Request) {
@@ -170,48 +169,45 @@ func handlerAPIUnverifiedQuotesID(w http.ResponseWriter, r *http.Request) {
 		quote.Text = subm.Text
 
 		// Update UnverifiedQuote in database
-		status := database.UpdateUnverifiedQuote(quote)
+		err = database.UpdateUnverifiedQuote(quote)
 
-		switch status.Code {
-		case database.StatusError:
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprintf(w, "internal server error")
-			log.Printf("/api/unverifiedquotes/:id: quote updating failed with error '%v' for request body '%s' and UnverifiedQuoteT %v", status.Message, bytes, quote)
-			break
-		case database.StatusInvalidTeacherID:
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprintf(w, "unknown TeacherID: %d", quote.TeacherID)
-			break
-		case database.StatusInvalidQuoteID:
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprintf(w, "unknown QuoteID: %d", quote.QuoteID)
-			break
+		if err != nil {
+			switch err.(type) {
+			case database.InvalidTeacherIDError:
+				w.WriteHeader(http.StatusNotFound)
+				fmt.Fprintf(w, "unknown TeacherID: %d", quote.TeacherID)
+			case database.InvalidQuoteIDError:
+				w.WriteHeader(http.StatusNotFound)
+				fmt.Fprintf(w, "unknown QuoteID: %d", quote.QuoteID)
+			default: //generic / database.DBError:
+				w.WriteHeader(http.StatusInternalServerError)
+				fmt.Fprintf(w, "internal server error")
+				log.Printf("/api/unverifiedquotes/:id: quote updating failed with error '%s' for request body '%s' and UnverifiedQuoteT %v", err.Error(), bytes, quote)
+			}
 		}
 
-		break
+		//TODO missing w.WriteHeader(http.StatusOK)?
 
 	case "DELETE":
 
 		// Delete UnverifiedQuote from database
-		status := database.DeleteUnverifiedQuote(int32(id))
+		err = database.DeleteUnverifiedQuote(int32(id))
 
-		switch status.Code {
-		case database.StatusError:
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprintf(w, "internal server error")
-			log.Printf("/api/unverifiedquotes/:id: quote deletion failed with error '%v'", status.Message)
-			break
-		case database.StatusInvalidQuoteID:
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprintf(w, "unknown QuoteID: %d", id)
-			break
+		if err != nil {
+			switch err.(type) {
+			case database.InvalidQuoteIDError:
+				w.WriteHeader(http.StatusNotFound)
+				fmt.Fprintf(w, "unknown QuoteID: %d", id)
+			default:
+				w.WriteHeader(http.StatusInternalServerError)
+				fmt.Fprintf(w, "internal server error")
+				log.Printf("/api/unverifiedquotes/:id: quote deletion failed with error '%s'", err.Error())
+			}
 		}
-
-		break
+		//TODO missing w.WriteHeader(http.StatusOK)?
 
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		break
 	}
 }
 
@@ -237,18 +233,20 @@ func handlerAPIUnverifiedQuotesIDConfirm(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	q, status := database.GetUnverifiedQuoteByID(int32(id))
+	q, err := database.GetUnverifiedQuoteByID(int32(id))
 
-	switch status.Code {
-	case database.StatusError:
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "internal server error")
-		log.Printf("/api/unverifiedquotes/:id/confirm: getting unverified quotes failed with error '%v'", status.Message)
-		return
-	case database.StatusInvalidQuoteID:
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "unknown QuoteID: %d", id)
-		return
+	if err != nil {
+		switch err.(type) {
+		case database.InvalidQuoteIDError:
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprintf(w, "unknown QuoteID: %d", id)
+			return
+		default:
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "internal server error")
+			log.Printf("/api/unverifiedquotes/:id/confirm: getting unverified quotes failed with error '%s'", err.Error())
+			return
+		}
 	}
 
 	if q.TeacherID == 0 {
@@ -257,26 +255,29 @@ func handlerAPIUnverifiedQuotesIDConfirm(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	status = database.CreateQuote(database.QuoteT{
+	err = database.CreateQuote(database.QuoteT{
 		TeacherID: q.TeacherID,
 		Context:   q.Context,
 		Text:      q.Text,
 		Unixtime:  q.Unixtime,
 	})
 
-	switch status.Code {
-	case database.StatusError:
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "internal server error")
-		log.Printf("/api/unverifiedquotes/:id/confirm: quote creation failed with error '%v'", status.Message)
-		return
-	case database.StatusInvalidTeacherID:
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "unknown TeacherID: %d", id)
-		return
+	if err != nil {
+		switch err.(type) {
+		case database.InvalidTeacherIDError:
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprintf(w, "unknown TeacherID: %d", id)
+			return
+		default:
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "internal server error")
+			log.Printf("/api/unverifiedquotes/:id/confirm: quote creation failed with error '%s'", err.Error())
+			return
+		}
 	}
 
 	database.DeleteUnverifiedQuote(int32(id))
+	//TODO missing w.WriteHeader(http.StatusOK)?
 }
 
 func handlerAPITeachers(w http.ResponseWriter, r *http.Request) {
@@ -315,14 +316,15 @@ func handlerAPITeachers(w http.ResponseWriter, r *http.Request) {
 	teacher.Title = subm.Title
 	teacher.Note = subm.Note
 
-	status := database.CreateTeacher(teacher)
+	err = database.CreateTeacher(teacher)
 
-	if status.Code != database.StatusOK {
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "internal server error")
-		log.Printf("/api/teachers: creating teacher failed with error '%v' for request body '%s' and TeacherT %v", status.Message, bytes, teacher)
+		log.Printf("/api/teachers: creating teacher failed with error '%s' for request body '%s' and TeacherT %v", err.Error(), bytes, teacher)
 		return
 	}
+	//TODO missing w.WriteHeader(http.StatusOK)?
 }
 
 func handlerAPITeachersID(w http.ResponseWriter, r *http.Request) {
@@ -377,14 +379,15 @@ func handlerAPITeachersID(w http.ResponseWriter, r *http.Request) {
 	teacher.Title = subm.Title
 	teacher.Note = subm.Note
 
-	status := database.UpdateTeacher(teacher)
+	err = database.UpdateTeacher(teacher)
 
-	if status.Code != database.StatusOK {
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "internal server error")
-		log.Printf("/api/teachers: updating teacher failed with error '%v' for request body '%s' and TeacherT %v", status.Message, bytes, teacher)
+		log.Printf("/api/teachers: updating teacher failed with error '%s' for request body '%s' and TeacherT %v", err.Error(), bytes, teacher)
 		return
 	}
+	//TODO missing w.WriteHeader(http.StatusOK)?
 }
 
 /* -------------------------------------------------------------------------- */

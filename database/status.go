@@ -1,15 +1,32 @@
 package database
 
-// Status codes
-const (
-	StatusOK               int32 = 0
-	StatusError            int32 = 1
-	StatusInvalidTeacherID int32 = 2
-	StatusInvalidQuoteID   int32 = 3
-)
-
-// Status holds the status code and the status message of any database function
-type Status struct {
-	Code    int32
+// InvalidTeacherIDError is used when the TeacherID is invalid
+type InvalidTeacherIDError struct {
 	Message string
+}
+
+func (err InvalidTeacherIDError) Error() string {
+	return err.Message
+}
+
+// InvalidQuoteIDError is used when the QuoteID is invalid
+type InvalidQuoteIDError struct {
+	Message string
+}
+
+func (err InvalidQuoteIDError) Error() string {
+	return err.Message
+}
+
+// DBError is used when unspecific database operations fail / rows.Scan fails
+type DBError struct {
+	Message string
+	InnerErr error
+}
+
+func (err DBError) Error() string {
+	if err.InnerErr != nil {
+		return err.Message + ": " + err.InnerErr.Error()
+	}
+	return err.Message
 }
