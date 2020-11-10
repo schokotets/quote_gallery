@@ -251,7 +251,7 @@ func handlerAPIUnverifiedQuotesIDConfirm(w http.ResponseWriter, r *http.Request)
 
 	if q.TeacherID == 0 {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "invalid TeacherID: 0")
+		fmt.Fprintf(w, "unverifiedQuote has invalid TeacherID (it needs a valid one to be confirmed)")
 		return
 	}
 
