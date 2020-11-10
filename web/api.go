@@ -112,7 +112,7 @@ func handlerAPIUnverifiedQuotesID(w http.ResponseWriter, r *http.Request) {
 		// This should not happend, because handlerAPIUnverifiedQuotes is only called if
 		// uri pattern is matched, see web.go
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "internal server error")
+		fmt.Fprintf(w, "cannot convert in-url id to int")
 		return
 	}
 	if id == 0 {
@@ -223,7 +223,7 @@ func handlerAPIUnverifiedQuotesIDConfirm(w http.ResponseWriter, r *http.Request)
 		// This should not happend, because handlerAPIUnverifiedQuotes is only called if
 		// uri pattern is matched, see web.go
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "internal server error")
+		fmt.Fprintf(w, "cannot convert in-url id to int")
 		return
 	}
 
@@ -339,7 +339,7 @@ func handlerAPITeachersID(w http.ResponseWriter, r *http.Request) {
 		// This should not happend, because handlerAPIUnverifiedQuotes is only called if
 		// uri pattern is matched, see web.go
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "internal server error")
+		fmt.Fprintf(w, "cannot convert in-url id to int")
 		return
 	}
 
