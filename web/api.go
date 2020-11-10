@@ -60,7 +60,7 @@ func handlerAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
 
 	switch subm.Teacher.(type) {
 	case float64:
-		if subm.Teacher.(float64) == 0 {
+		if int32(subm.Teacher.(float64)) <= 0 {
 			w.WriteHeader(http.StatusBadRequest)
 			fmt.Fprintf(w, "invalid TeacherID: 0")
 			return
@@ -142,7 +142,7 @@ func handlerAPIUnverifiedQuotesID(w http.ResponseWriter, r *http.Request) {
 
 		switch subm.Teacher.(type) {
 		case float64:
-			if subm.Teacher.(float64) == 0 {
+			if int32(subm.Teacher.(float64)) <= 0 {
 				w.WriteHeader(http.StatusBadRequest)
 				fmt.Fprintf(w, "invalid TeacherID: 0")
 				return
