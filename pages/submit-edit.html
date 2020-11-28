@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+	<meta charset="UTF-8">
+	<title>Zitat #{{.Quote.QuoteID}} bearbeiten</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="/static/style.css" media="all">
+</head>
+<body>
+	<h1>Zitat #{{.Quote.QuoteID}} bearbeiten</h1>
+	<form id="form-submit" method="post">
+		<label for="quotefield">Zitat:</label>
+		<input class="fullwidth" id="quotefield" name="text" type="text" value={{.Quote.Text}} required>
+		<br>
+
+		<label for="contextfield">Kontext (Situation; optional):</label>
+		<input class="fullwidth" id="contextfield" name="context" type="text" value={{.Quote.Context}}>
+		<br>
+
+		<label for="teacherselect">Lehrer:</label>
+		<select id="teacherselect" name="teacherid" required>
+			<option value="" disabled hidden></option>
+			<option value="" {{if .Quote.TeacherName}}selected{{end}}><i>selbst eingeben...</i></option>
+			{{range .Teachers}}
+			<option {{if eq $.Quote.TeacherID .TeacherID }}selected{{end}} value="{{.TeacherID}}">{{.Name}}, {{.Title}}{{if .Note}} ({{.Note}}){{end}}</option>
+			{{end}}
+		</select>
+		<br>
+
+		<div class="customteacher" style="display: none">
+			<label for="customteacherfield">Name des Lehrers (bitte eindeutig - notfalls mit Notiz):</label>
+			<input class="fullwidth" id="customteacherfield" name="teachername" type="text" {{if .Quote.TeacherName}}value={{.Quote.TeacherName}} {{end}}>
+			<br>
+		</div>
+
+		<input type="submit" value="Abändern">
+
+	</form>
+	<script src="/static/axios.min.js"></script>
+	<script src="/static/submit.js"></script>
+</body>
+</html>

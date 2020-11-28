@@ -22,11 +22,23 @@ function processForm(e) {
     }
   }
 
-  axios.post("/api/quotes/submit", req)
-    .then(function (res) {
+  let EDITING = window.location.pathname.includes("edit")
+  let request
+  if (EDITING) {
+    request = axios.put("/api/unverifiedquotes/"+window.location.pathname.split("/")[3], req)
+  } else {
+    request = axios.post("/api/quotes/submit", req)
+  }
+  request.then(function (res) {
       if(res.status == 200) {
         form.reset();
-        alert("Erfolgreich eingesendet!");
+        if(EDITING) {
+          //hiding form because chrome re-shows last input values
+          document.getElementById("form-submit").style.display = "none"
+          window.location = document.referrer
+        } else {
+          alert("Erfolgreich eingesendet!");
+        }
       } else {
         return Promise.reject({response: res})
       }
@@ -64,6 +76,7 @@ let customteacher = document.getElementsByClassName("customteacher")[0];
 let customteacherfield = document.getElementById("customteacherfield");
 
 teacherselect.addEventListener("change", checkTeacherSelect);
+checkTeacherSelect({target: teacherselect})
 
 function checkTeacherSelect(e) {
   if(e.target.selectedIndex == 1) { //custom field

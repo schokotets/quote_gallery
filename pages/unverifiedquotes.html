@@ -17,6 +17,7 @@
 				<th>Text</th>
 				<th>Unixtime</th>
 				<th>IPHash</th>
+				<th>OPERATIONS</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -29,6 +30,7 @@
 				<td>{{.Text}}</td>
 				<td>{{.Unixtime}}</td>
 				<td>{{.IPHash}}</td>
+				<td><a href="/admin/unverifiedquotes/{{.QuoteID}}/edit">edit</a></td>
 			</tr>
 			{{end}}
 		</tbody>

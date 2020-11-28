@@ -18,6 +18,7 @@ func SetupRoutes() {
 
 	rt.HandleFunc("/submit", pageSubmit)
 	rt.HandleFunc("/admin/unverifiedquotes", pageAdminUnverifiedQuotes)
+	rt.HandleFunc("/admin/unverifiedquotes/{id:[0-9]+}/edit", pageAdminUnverifiedQuotesIDEdit)
 	rt.HandleFunc("/api/quotes/submit", handlerAPIQuotesSubmit)
 	rt.HandleFunc("/api/unverifiedquotes/{id:[0-9]+}", handlerAPIUnverifiedQuotesID)
 	rt.HandleFunc("/api/unverifiedquotes/{id:[0-9]+}/confirm", handlerAPIUnverifiedQuotesIDConfirm)
