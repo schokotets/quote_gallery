@@ -226,7 +226,7 @@ func ExecuteQuery(query string) error {
 // The weight variable will be zero.
 //
 // Possible returned error type: generic
-func GetQuotes() (*[]QuoteT, error) {
+func GetQuotes() ([]QuoteT, error) {
 	if database == nil {
 		return nil, errors.New("GetQuotes: not connected to database")
 	}
@@ -241,7 +241,7 @@ func GetQuotes() (*[]QuoteT, error) {
 // GetQuotesByString returns a slice containing all quotes.
 // The weight variable will indicate how well the given text matches the corresponding quote.
 // Possible returned error type: generic
-func GetQuotesByString(text string) (*[]QuoteT, error) {
+func GetQuotesByString(text string) ([]QuoteT, error) {
 	if database == nil {
 		return nil, errors.New("GetQuotesByString: not connected to database")
 	}
@@ -408,7 +408,7 @@ func DeleteQuote(ID int32) error {
 // The returned slice is not sorted.
 //
 // Possible returned error type: generic
-func GetTeachers() (*[]TeacherT, error) {
+func GetTeachers() ([]TeacherT, error) {
 	if database == nil {
 		return nil, errors.New("GetTeachers: not connected to database")
 	}
@@ -567,7 +567,7 @@ func DeleteTeacher(ID int32) error {
 // GetUnverifiedQuotes returns a slice containing all unverified quotes.
 //
 // Possible returned error types: generic / DBError
-func GetUnverifiedQuotes() (*[]UnverifiedQuoteT, error) {
+func GetUnverifiedQuotes() ([]UnverifiedQuoteT, error) {
 	if database == nil {
 		return nil, errors.New("GetUnverifiedQuotes: not connected to database")
 	}
@@ -618,7 +618,7 @@ func GetUnverifiedQuotes() (*[]UnverifiedQuoteT, error) {
 		quotes = append(quotes, q)
 	}
 
-	return &quotes, nil
+	return quotes, nil
 }
 
 // GetUnverifiedQuoteByID returns a single unverified quote corresponding to the given ID.

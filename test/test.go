@@ -32,36 +32,36 @@ func main() {
 	//fmt.Println(i)
 
 	database.CreateQuote(database.QuoteT{
-		TeacherID: (*i)[0].TeacherID,
+		TeacherID: i[0].TeacherID,
 		Context:   "Nicer Tag",
 		Text:      "AAA BBB CCC",
 	})
 
 	database.CreateQuote(database.QuoteT{
-		TeacherID: (*i)[1].TeacherID,
+		TeacherID: i[1].TeacherID,
 		Context:   "nutzer Tag",
 		Text:      "BBB CCC",
 	})
 
 	database.CreateQuote(database.QuoteT{
-		TeacherID: (*i)[1].TeacherID,
+		TeacherID: i[1].TeacherID,
 		Context:   "cooler Tag",
 		Text:      "DDD EEE",
 	})
 
 	database.CreateQuote(database.QuoteT{
-		TeacherID: (*i)[1].TeacherID,
+		TeacherID: i[1].TeacherID,
 		Context:   "asdfasdf",
 		Text:      "FFF DDD EEE",
 	})
 
-	database.DeleteTeacher((*i)[1].TeacherID)
+	database.DeleteTeacher(i[1].TeacherID)
 
 	j, _ := database.GetQuotes()
 	fmt.Println(j)
 	database.PrintWordsMap()
 
-	// database.DeleteTeacher((*i)[1].TeacherID)
+	// database.DeleteTeacher(i[1].TeacherID)
 	// //database.DeleteQuote(2)
 
 	database.Initialize()
@@ -72,7 +72,7 @@ func main() {
 
 	// database.UpdateQuote(database.QuoteT{
 	// 	QuoteID:   2,
-	// 	TeacherID: (*i)[0].TeacherID,
+	// 	TeacherID: i[0].TeacherID,
 	// 	Context:   "Nicer Tag",
 	// 	Text:      "BBB CCC DDD",
 	// })

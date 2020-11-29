@@ -64,7 +64,7 @@ func pageAdminUnverifiedQuotesIDEdit(w http.ResponseWriter, r *http.Request) {
 
 	editdata := struct {
 		Quote database.UnverifiedQuoteT
-		Teachers *[]database.TeacherT
+		Teachers []database.TeacherT
 	} {
 		quote,
 		teachers,

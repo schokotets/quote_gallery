@@ -244,7 +244,7 @@ func unsafeOverwriteQuoteInCache(q QuoteT) error {
 }
 
 func unsafeDeleteTeacherFromCache(ID int32) error {
-	quotes := *unsafeGetQuotesFromCache()
+	quotes := unsafeGetQuotesFromCache()
 	for _, q := range quotes {
 		if q.TeacherID == ID {
 			log.Print(q)
@@ -340,19 +340,19 @@ func unsafeDeleteQuoteFromCache(ID int32) error {
 	return nil
 }
 
-func unsafeGetQuotesFromCache() *[]QuoteT {
+func unsafeGetQuotesFromCache() []QuoteT {
 	quoteSlice := make([]QuoteT, len(cache.quoteSlice))
 	copy(quoteSlice, cache.quoteSlice)
-	return &quoteSlice
+	return quoteSlice
 }
 
-func unsafeGetTeachersFromCache() *[]TeacherT {
+func unsafeGetTeachersFromCache() []TeacherT {
 	teacherSlice := make([]TeacherT, len(cache.teacherSlice))
 	copy(teacherSlice, cache.teacherSlice)
-	return &teacherSlice
+	return teacherSlice
 }
 
-func unsafeGetQuotesByStringFromCache(text string) *[]QuoteT {
+func unsafeGetQuotesByStringFromCache(text string) []QuoteT {
 
 	quoteSlice := make([]QuoteT, len(cache.quoteSlice))
 	copy(quoteSlice, cache.quoteSlice)
@@ -365,7 +365,7 @@ func unsafeGetQuotesByStringFromCache(text string) *[]QuoteT {
 			quoteSlice[v.enumID].Match += float32(v.count) / float32(wordsMapItem.totalOccurences)
 		}
 	}
-	return &quoteSlice
+	return quoteSlice
 }
 
 // PrintWordsMap is a debugging function
