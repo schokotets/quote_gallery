@@ -26,9 +26,13 @@ table {
 
 table td, table th {
   border: 1px solid;
-  padding: 0.6em 0.3em;
+  padding: 0.6em 0.4em;
 }
 
 table tr:nth-child(2n), table th {
   background-color: #ddd;
+}
+
+table a:link, table a:visited {
+  color: blue;
 }
