@@ -352,6 +352,15 @@ func unsafeGetTeachersFromCache() []TeacherT {
 	return teacherSlice
 }
 
+func unsafeGetTeacherByIDFromCache(ID int32) (TeacherT, bool) {
+	for _, teacher := range cache.teacherSlice {
+		if teacher.TeacherID == ID {
+			return teacher, true
+		}
+	}
+	return TeacherT{}, false
+}
+
 func unsafeGetQuotesByStringFromCache(text string) []QuoteT {
 
 	quoteSlice := make([]QuoteT, len(cache.quoteSlice))

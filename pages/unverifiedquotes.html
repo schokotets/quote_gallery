@@ -24,7 +24,7 @@
 			{{range .}}
 			<tr>
 				<td>#{{.QuoteID}}</td>
-				<td>{{if .TeacherID}}ID #{{.TeacherID}}{{end}}
+				<td>{{if .TeacherID}}{{with (GetTeacherByID .TeacherID)}}#{{.TeacherID}}: {{.Title}} {{.Name}}{{if .Note}} ({{.Note}}){{end}}{{end}}{{end}}
 					{{if .TeacherName}}{{.TeacherName}}{{end}}</td>
 				<td>{{.Context}}</td>
 				<td>{{.Text}}</td>

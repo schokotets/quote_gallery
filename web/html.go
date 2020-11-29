@@ -36,8 +36,13 @@ func pageAdminUnverifiedQuotes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sort.Slice(quotes, func(i, j int) bool { return quotes[i].Unixtime < quotes[j].Unixtime })
-	tmpl := template.Must(template.ParseFiles("pages/unverifiedquotes.html"))
-	tmpl.Execute(w, quotes)
+	tmpl := template.Must(template.New("unverifiedquotes.html").Funcs(template.FuncMap{
+		"GetTeacherByID": database.GetTeacherByID,
+	}).ParseFiles("pages/unverifiedquotes.html"))
+	err = tmpl.Execute(w, quotes)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func pageAdminUnverifiedQuotesIDEdit(w http.ResponseWriter, r *http.Request) {

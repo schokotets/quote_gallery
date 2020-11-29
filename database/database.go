@@ -420,6 +420,28 @@ func GetTeachers() ([]TeacherT, error) {
 	return unsafeGetTeachersFromCache(), nil
 }
 
+// GetTeacherByID returns the teacher corresponding to the given ID.
+//
+// Possible returned error types: generic / InvalidTeacherIDError
+func GetTeacherByID(ID int32) (TeacherT, error) {
+	if database == nil {
+		return TeacherT{}, errors.New("GetTeacherByID: not connected to database")
+	}
+
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
+
+	teacher, ok := unsafeGetTeacherByIDFromCache(ID)
+
+	if !ok {
+		// Teacher not found
+		return TeacherT{}, InvalidTeacherIDError{ "GetTeacherByID: no matching teacher found" }
+	}
+
+	return teacher, nil
+}
+
+
 // CreateTeacher creates a new teacher.
 //
 // Possible returned error types: generic / DBError
