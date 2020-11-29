@@ -97,7 +97,6 @@ func postAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
 			log.Printf("/api/quotes/submit: quote creation failed with error '%s' for request body '%s' and UnverifiedQuoteT %v", err.Error(), bytes, quote)
 		}
 	}
-	//TODO missing w.WriteHeader(http.StatusOK)?
 }
 
 func putAPIUnverifiedQuotesID(w http.ResponseWriter, r *http.Request) {
@@ -176,8 +175,6 @@ func putAPIUnverifiedQuotesID(w http.ResponseWriter, r *http.Request) {
 			log.Printf("/api/unverifiedquotes/:id: quote updating failed with error '%s' for request body '%s' and UnverifiedQuoteT %v", err.Error(), bytes, quote)
 		}
 	}
-
-	//TODO missing w.WriteHeader(http.StatusOK)?
 }
 
 func deleteAPIUnverifiedQuotesID(w http.ResponseWriter, r *http.Request) {
@@ -209,7 +206,6 @@ func deleteAPIUnverifiedQuotesID(w http.ResponseWriter, r *http.Request) {
 			log.Printf("/api/unverifiedquotes/:id: quote deletion failed with error '%s'", err.Error())
 		}
 	}
-	//TODO missing w.WriteHeader(http.StatusOK)?
 }
 
 func putAPIUnverifiedQuotesIDConfirm(w http.ResponseWriter, r *http.Request) {
@@ -272,7 +268,6 @@ func putAPIUnverifiedQuotesIDConfirm(w http.ResponseWriter, r *http.Request) {
 	}
 
 	database.DeleteUnverifiedQuote(int32(id))
-	//TODO missing w.WriteHeader(http.StatusOK)?
 }
 
 func postAPITeachers(w http.ResponseWriter, r *http.Request) {
@@ -313,7 +308,6 @@ func postAPITeachers(w http.ResponseWriter, r *http.Request) {
 		log.Printf("/api/teachers: creating teacher failed with error '%s' for request body '%s' and TeacherT %v", err.Error(), bytes, teacher)
 		return
 	}
-	//TODO missing w.WriteHeader(http.StatusOK)?
 }
 
 func putAPITeachersID(w http.ResponseWriter, r *http.Request) {
@@ -370,7 +364,6 @@ func putAPITeachersID(w http.ResponseWriter, r *http.Request) {
 		log.Printf("/api/teachers: updating teacher failed with error '%s' for request body '%s' and TeacherT %v", err.Error(), bytes, teacher)
 		return
 	}
-	//TODO missing w.WriteHeader(http.StatusOK)?
 }
 
 /* -------------------------------------------------------------------------- */
