@@ -47,3 +47,10 @@ table tr:nth-child(2n), table th {
 table a:link, table a:visited {
   color: blue;
 }
+
+.submitbtn {
+  padding: 0.5em;
+  border: solid 1px black;
+  text-decoration: none;
+  color: black;
+}
