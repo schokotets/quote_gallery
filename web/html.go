@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"net/http"
 	"quote_gallery/database"
+	"sort"
 	"strconv"
 )
 
@@ -28,14 +29,15 @@ func pageRoot(w http.ResponseWriter, r *http.Request) {
 }
 
 func pageAdminUnverifiedQuotes(w http.ResponseWriter, r *http.Request) {
-	teachers, err := database.GetUnverifiedQuotes()
+	quotes, err := database.GetUnverifiedQuotes()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "failed to get unverified quotes: %v", err)
 		return
 	}
+	sort.Slice(quotes, func(i, j int) bool { return quotes[i].Unixtime < quotes[j].Unixtime })
 	tmpl := template.Must(template.ParseFiles("pages/unverifiedquotes.html"))
-	tmpl.Execute(w, teachers)
+	tmpl.Execute(w, quotes)
 }
 
 func pageAdminUnverifiedQuotesIDEdit(w http.ResponseWriter, r *http.Request) {
