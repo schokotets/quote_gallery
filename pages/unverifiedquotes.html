@@ -23,17 +23,28 @@
 		<tbody>
 			{{range .}}
 			<tr>
-				<td>{{.QuoteID}}</td>
+				<td>#{{.QuoteID}}</td>
 				<td>{{if .TeacherID}}ID #{{.TeacherID}}{{end}}
 					{{if .TeacherName}}{{.TeacherName}}{{end}}</td>
 				<td>{{.Context}}</td>
 				<td>{{.Text}}</td>
 				<td>{{.Unixtime}}</td>
 				<td>{{.IPHash}}</td>
-				<td><a href="/admin/unverifiedquotes/{{.QuoteID}}/edit">edit</a></td>
+				<td>
+					<a href="javascript:http('delete','/api/unverifiedquotes/{{.QuoteID}}')">delete</a>
+					&nbsp;
+					<a href="/admin/unverifiedquotes/{{.QuoteID}}/edit">edit</a>
+					{{if .TeacherID}}
+					&nbsp;
+					<a href="javascript:http('put','/api/unverifiedquotes/{{.QuoteID}}/confirm')">confirm</a>
+					{{end}}
+
+				</td>
 			</tr>
 			{{end}}
 		</tbody>
 	</table>
+	<script src="/static/axios.min.js"></script>
+	<script src="/static/admin.js"></script>
 </body>
 </html>
