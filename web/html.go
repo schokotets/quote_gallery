@@ -30,18 +30,37 @@ func pageRoot(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, quotes)
 }
 
-func pageAdminUnverifiedQuotes(w http.ResponseWriter, r *http.Request) {
+func pageAdmin(w http.ResponseWriter, r *http.Request) {
 	quotes, err := database.GetUnverifiedQuotes()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "failed to get unverified quotes: %v", err)
 		return
 	}
+
+	teachers, err := database.GetTeachers()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "failed to get teachers: %v", err)
+		return
+	}
+
 	sort.Slice(quotes, func(i, j int) bool { return quotes[i].Unixtime < quotes[j].Unixtime })
-	tmpl := template.Must(template.New("unverifiedquotes.html").Funcs(template.FuncMap{
+	sort.Slice(teachers, func(i, j int) bool { return teachers[i].TeacherID < teachers[j].TeacherID })
+
+	pagedata := struct {
+		Quotes []database.UnverifiedQuoteT
+		Teachers []database.TeacherT
+	} {
+		quotes,
+		teachers,
+	}
+
+	tmpl := template.Must(template.New("admin.html").Funcs(template.FuncMap{
 		"GetTeacherByID": database.GetTeacherByID,
-	}).ParseFiles("pages/unverifiedquotes.html"))
-	err = tmpl.Execute(w, quotes)
+	}).ParseFiles("pages/admin.html"))
+
+	err = tmpl.Execute(w, pagedata)
 	if err != nil {
 		panic(err)
 	}

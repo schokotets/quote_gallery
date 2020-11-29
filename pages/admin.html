@@ -2,12 +2,13 @@
 <html lang="de">
 <head>
 	<meta charset="UTF-8">
-	<title>Unbestätigte Zitate - Adminbereich</title>
+	<title>Adminbereich</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="stylesheet" href="/static/style.css" media="all">
 </head>
 <body style="max-width: unset">
-	<h1>Unbestätigte Zitate</h1>
+	<h1>Adminbereich</h1>
+	<h2>Unbestätigte Zitate</h2>
 	<table>
 		<thead>
 			<tr>
@@ -21,7 +22,7 @@
 			</tr>
 		</thead>
 		<tbody>
-			{{range .}}
+			{{range .Quotes}}
 			<tr>
 				<td>#{{.QuoteID}}</td>
 				<td>{{if .TeacherID}}{{with (GetTeacherByID .TeacherID)}}#{{.TeacherID}}: {{.Title}} {{.Name}}{{if .Note}} ({{.Note}}){{end}}{{end}}{{end}}
@@ -44,6 +45,34 @@
 			{{end}}
 		</tbody>
 	</table>
+
+
+	<h2>Lehrer</h2>
+	<table>
+		<thead>
+			<tr>
+				<th>ID</th>
+				<th>Title</th>
+				<th>Name</th>
+				<th>Note</th>
+				<th>OPERATIONS</th>
+			</tr>
+		</thead>
+		<tbody>
+			{{range .Teachers}}
+			<tr>
+				<td>#{{.TeacherID}}</td>
+				<td>{{.Title}}</td>
+				<td>{{.Name}}</td>
+				<td>{{.Note}}</td>
+				<td>
+					<a href="/admin/teachers/{{.TeacherID}}/edit">edit</a>
+				</td>
+			</tr>
+			{{end}}
+		</tbody>
+	</table>
+
 	<script src="/static/axios.min.js"></script>
 	<script src="/static/admin.js"></script>
 </body>
