@@ -72,7 +72,7 @@ func pageAdminUnverifiedQuotesIDEdit(w http.ResponseWriter, r *http.Request) {
 		teachers,
 	}
 
-	tmpl := template.Must(template.ParseFiles("pages/submit-edit.html"))
+	tmpl := template.Must(template.ParseFiles("pages/edit-unverifiedquote.html"))
 	tmpl.Execute(w, editdata)
 }
 
