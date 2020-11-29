@@ -35,15 +35,9 @@ type teacherInputT struct {
 /*                           EXPORTED API FUNCTIONS                           */
 /* -------------------------------------------------------------------------- */
 
-func handlerAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
+func postAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
 	var subm quoteInputT
 	var quote database.UnverifiedQuoteT
-
-	// Check if right http method is used
-	if r.Method != "POST" {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
 
 	// parse json request body into temporary QuoteInput
 	bytes, _ := ioutil.ReadAll(r.Body)
@@ -106,7 +100,7 @@ func handlerAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
 	//TODO missing w.WriteHeader(http.StatusOK)?
 }
 
-func handlerAPIUnverifiedQuotesID(w http.ResponseWriter, r *http.Request) {
+func putAPIUnverifiedQuotesID(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(mux.Vars(r)["id"])
 	if err != nil {
 		// This should not happend, because handlerAPIUnverifiedQuotes is only called if
@@ -124,100 +118,101 @@ func handlerAPIUnverifiedQuotesID(w http.ResponseWriter, r *http.Request) {
 	var subm quoteInputT
 	var quote database.UnverifiedQuoteT
 
-	switch r.Method {
-	case "PUT":
+	// parse json request body into temporary QuoteInput
+	bytes, _ := ioutil.ReadAll(r.Body)
+	err = json.Unmarshal(bytes, &subm)
 
-		// parse json request body into temporary QuoteInput
-		bytes, _ := ioutil.ReadAll(r.Body)
-		err := json.Unmarshal(bytes, &subm)
-
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprintf(w, "unparsable JSON")
-			return
-		}
-
-		// Check validity of temporary QuoteInput and
-		// copy content into UnverifiedQuote
-
-		switch subm.Teacher.(type) {
-		case float64:
-			if int32(subm.Teacher.(float64)) <= 0 {
-				w.WriteHeader(http.StatusBadRequest)
-				fmt.Fprintf(w, "invalid TeacherID: 0")
-				return
-			}
-			quote.TeacherID = int32(subm.Teacher.(float64))
-			quote.TeacherName = ""
-		case string:
-			quote.TeacherID = 0
-			quote.TeacherName = subm.Teacher.(string)
-		default:
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprintf(w, "invalid TeacherID: its type is neither string nor int")
-			return
-		}
-
-		if len(subm.Text) == 0 {
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprintf(w, "Text is empty")
-			return
-		}
-
-		quote.QuoteID = int32(id)
-		quote.Context = subm.Context
-		quote.Text = subm.Text
-
-		// Update UnverifiedQuote in database
-		err = database.UpdateUnverifiedQuote(quote)
-
-		if err != nil {
-			switch err.(type) {
-			case database.InvalidTeacherIDError:
-				w.WriteHeader(http.StatusNotFound)
-				fmt.Fprintf(w, "unknown TeacherID: %d", quote.TeacherID)
-			case database.InvalidQuoteIDError:
-				w.WriteHeader(http.StatusNotFound)
-				fmt.Fprintf(w, "unknown QuoteID: %d", quote.QuoteID)
-			default: //generic / database.DBError:
-				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprintf(w, "internal server error")
-				log.Printf("/api/unverifiedquotes/:id: quote updating failed with error '%s' for request body '%s' and UnverifiedQuoteT %v", err.Error(), bytes, quote)
-			}
-		}
-
-		//TODO missing w.WriteHeader(http.StatusOK)?
-
-	case "DELETE":
-
-		// Delete UnverifiedQuote from database
-		err = database.DeleteUnverifiedQuote(int32(id))
-
-		if err != nil {
-			switch err.(type) {
-			case database.InvalidQuoteIDError:
-				w.WriteHeader(http.StatusNotFound)
-				fmt.Fprintf(w, "unknown QuoteID: %d", id)
-			default:
-				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprintf(w, "internal server error")
-				log.Printf("/api/unverifiedquotes/:id: quote deletion failed with error '%s'", err.Error())
-			}
-		}
-		//TODO missing w.WriteHeader(http.StatusOK)?
-
-	default:
-		w.WriteHeader(http.StatusMethodNotAllowed)
-	}
-}
-
-func handlerAPIUnverifiedQuotesIDConfirm(w http.ResponseWriter, r *http.Request) {
-	// Check if right http method is used
-	if r.Method != "PUT" {
-		w.WriteHeader(http.StatusMethodNotAllowed)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "unparsable JSON")
 		return
 	}
 
+	// Check validity of temporary QuoteInput and
+	// copy content into UnverifiedQuote
+
+	switch subm.Teacher.(type) {
+	case float64:
+		if int32(subm.Teacher.(float64)) <= 0 {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, "invalid TeacherID: 0")
+			return
+		}
+		quote.TeacherID = int32(subm.Teacher.(float64))
+		quote.TeacherName = ""
+	case string:
+		quote.TeacherID = 0
+		quote.TeacherName = subm.Teacher.(string)
+	default:
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "invalid TeacherID: its type is neither string nor int")
+		return
+	}
+
+	if len(subm.Text) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Text is empty")
+		return
+	}
+
+	quote.QuoteID = int32(id)
+	quote.Context = subm.Context
+	quote.Text = subm.Text
+
+	// Update UnverifiedQuote in database
+	err = database.UpdateUnverifiedQuote(quote)
+
+	if err != nil {
+		switch err.(type) {
+		case database.InvalidTeacherIDError:
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprintf(w, "unknown TeacherID: %d", quote.TeacherID)
+		case database.InvalidQuoteIDError:
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprintf(w, "unknown QuoteID: %d", quote.QuoteID)
+		default: //generic / database.DBError:
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "internal server error")
+			log.Printf("/api/unverifiedquotes/:id: quote updating failed with error '%s' for request body '%s' and UnverifiedQuoteT %v", err.Error(), bytes, quote)
+		}
+	}
+
+	//TODO missing w.WriteHeader(http.StatusOK)?
+}
+
+func deleteAPIUnverifiedQuotesID(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(mux.Vars(r)["id"])
+	if err != nil {
+		// This should not happend, because handlerAPIUnverifiedQuotes is only called if
+		// uri pattern is matched, see web.go
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "cannot convert in-url id to int")
+		return
+	}
+	if id == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "invalid QuoteID: 0")
+		return
+	}
+
+	// Delete UnverifiedQuote from database
+	err = database.DeleteUnverifiedQuote(int32(id))
+
+	if err != nil {
+		switch err.(type) {
+		case database.InvalidQuoteIDError:
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprintf(w, "unknown QuoteID: %d", id)
+		default:
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "internal server error")
+			log.Printf("/api/unverifiedquotes/:id: quote deletion failed with error '%s'", err.Error())
+		}
+	}
+	//TODO missing w.WriteHeader(http.StatusOK)?
+}
+
+func putAPIUnverifiedQuotesIDConfirm(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(mux.Vars(r)["id"])
 	if err != nil {
 		// This should not happend, because handlerAPIUnverifiedQuotes is only called if
@@ -280,13 +275,7 @@ func handlerAPIUnverifiedQuotesIDConfirm(w http.ResponseWriter, r *http.Request)
 	//TODO missing w.WriteHeader(http.StatusOK)?
 }
 
-func handlerAPITeachers(w http.ResponseWriter, r *http.Request) {
-	// Check if right http method is used
-	if r.Method != "POST" {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
+func postAPITeachers(w http.ResponseWriter, r *http.Request) {
 	var subm teacherInputT
 	var teacher database.TeacherT
 
@@ -327,13 +316,7 @@ func handlerAPITeachers(w http.ResponseWriter, r *http.Request) {
 	//TODO missing w.WriteHeader(http.StatusOK)?
 }
 
-func handlerAPITeachersID(w http.ResponseWriter, r *http.Request) {
-	// Check if right http method is used
-	if r.Method != "PUT" {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
+func putAPITeachersID(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(mux.Vars(r)["id"])
 	if err != nil {
 		// This should not happend, because handlerAPIUnverifiedQuotes is only called if
