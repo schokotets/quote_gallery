@@ -19,6 +19,17 @@ input, select {
   width: 100%;
 }
 
+.quote {
+  margin: 2em 0;
+}
+
+.quote .text {
+  font-size: 1.3em;
+  line-height: 1.4;
+  margin-top: 0.1em;
+  margin-bottom: 0.2em;
+}
+
 table {
   border-collapse: collapse;
   margin-top: 1em;

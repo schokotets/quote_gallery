@@ -9,10 +9,15 @@
 <body>
 	<h1>Lehrerzitate</h1>
 	<a href="/submit">Zitat einsenden</a>
-	<ol>
+	<div class="quotelist">
 		{{range .}}
-		<li>{{if .Context}}{{.Context}}<br>{{end}}„{{.Text}}“ (TeacherID: {{.TeacherID}}) (QuoteID: {{.QuoteID}})</li>
+		<div class="quote">
+			<i><span class="id">Zitat #{{.QuoteID}}</span></i><br>
+			{{if .Context}}Situation: {{.Context}}<br>{{end}}
+			<span class="text" style="display:block">„{{.Text}}“</span>
+			<span class="teacher">~ {{with (GetTeacherByID .TeacherID)}}{{.Title}} {{.Name}}{{if .Note}} ({{.Note}}){{end}}{{end}}</span>
+		</div>
 		{{end}}
-	</ol>
+	</div>
 </body>
 </html>

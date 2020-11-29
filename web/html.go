@@ -24,7 +24,9 @@ func pageRoot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	quotes, _ = database.GetQuotes()
-	tmpl := template.Must(template.ParseFiles("pages/quotes.html"))
+	tmpl := template.Must(template.New("quotes.html").Funcs(template.FuncMap{
+		"GetTeacherByID": database.GetTeacherByID,
+	}).ParseFiles("pages/quotes.html"))
 	tmpl.Execute(w, quotes)
 }
 
