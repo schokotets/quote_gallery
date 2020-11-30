@@ -102,6 +102,27 @@ func pageAdminUnverifiedQuotesIDEdit(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, editdata)
 }
 
+func pageAdminTeachersIDEdit(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(mux.Vars(r)["id"])
+	if err != nil {
+		// This should not happen as handlerAPIUnverifiedQuotes is only called if
+		// uri pattern is matched, see web.go
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "internal server error")
+		return
+	}
+
+	teacher, err := database.GetTeacherByID(int32(id))
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "failed to get teacher #%v: %v", id, err)
+		return
+	}
+
+	tmpl := template.Must(template.ParseFiles("pages/edit-teacher.html"))
+	tmpl.Execute(w, teacher)
+}
+
 func pageSubmit(w http.ResponseWriter, r *http.Request) {
 	teachers, err := database.GetTeachers()
 	if err != nil {

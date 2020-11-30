@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+	<meta charset="UTF-8">
+	<title>Lehrer #{{.TeacherID}} bearbeiten</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="/static/style.css" media="all">
+</head>
+<body>
+	<h1>Lehrer #{{.TeacherID}} bearbeiten</h1>
+	<form id="form-edit" method="post">
+		<label for="titlefield">Titel:</label>
+		<input class="fullwidth" id="titlefield" name="title" type="text" required value={{.Title}}>
+		<br>
+
+		<label for="namefield">Nachname:</label>
+		<input class="fullwidth" id="namefield" name="name" type="text" required value={{.Name}}>
+		<br>
+
+		<label for="titlefield">Notiz:</label>
+		<input class="fullwidth" id="notefield" name="note" type="text" value={{.Note}}>
+		<br>
+
+		<input type="submit" value="Abändern">
+
+	</form>
+	<script src="/static/axios.min.js"></script>
+	<script src="/static/edit-teacher.js"></script>
+</body>
+</html>
