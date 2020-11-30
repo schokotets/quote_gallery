@@ -1,3 +1,4 @@
+let EDITING = window.location.pathname.includes("edit")
 let form = document.getElementById("form-submit");
 
 form.addEventListener("submit", processForm);
@@ -5,11 +6,12 @@ form.addEventListener("submit", processForm);
 function processForm(e) {
   e.preventDefault();
 
+
   let req = {};
   req["Text"] = document.getElementById("quotefield").value;
 
   let context = document.getElementById("contextfield").value;
-  if (context){
+  if (context || EDITING){
     req["Context"] = context
   }
   let teacherid = document.getElementById("teacherselect").value
@@ -22,7 +24,6 @@ function processForm(e) {
     }
   }
 
-  let EDITING = window.location.pathname.includes("edit")
   let request
   if (EDITING) {
     request = axios.put("/api/unverifiedquotes/"+window.location.pathname.split("/")[3], req)
