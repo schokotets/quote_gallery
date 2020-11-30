@@ -109,6 +109,7 @@ func pageSubmit(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "failed to get teachers")
 		return
 	}
+	sort.Slice(teachers, func(i, j int) bool { return teachers[i].Name < teachers[j].Name })
 	tmpl := template.Must(template.ParseFiles("pages/submit.html"))
 	tmpl.Execute(w, teachers)
 }
