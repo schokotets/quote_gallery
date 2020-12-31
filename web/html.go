@@ -123,6 +123,11 @@ func pageAdminTeachersIDEdit(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, teacher)
 }
 
+func pageAdminTeachersAdd(w http.ResponseWriter, r *http.Request) {
+	tmpl := template.Must(template.ParseFiles("pages/add-teacher.html"))
+	tmpl.Execute(w, nil)
+}
+
 func pageSubmit(w http.ResponseWriter, r *http.Request) {
 	teachers, err := database.GetTeachers()
 	if err != nil {

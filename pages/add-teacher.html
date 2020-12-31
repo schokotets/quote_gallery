@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+	<meta charset="UTF-8">
+	<title>Lehrer hinzufügen</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="/static/style.css" media="all">
+</head>
+<body>
+	<h1>Lehrer hinzufügen</h1>
+	<form id="form-add" method="post">
+		<label for="titlefield">Titel:</label>
+		<input class="fullwidth" id="titlefield" name="title" type="text" required>
+		<br>
+
+		<label for="namefield">Nachname:</label>
+		<input class="fullwidth" id="namefield" name="name" type="text" required>
+		<br>
+
+		<label for="titlefield">Notiz:</label>
+		<input class="fullwidth" id="notefield" name="note" type="text">
+		<br>
+
+		<input type="submit" value="hinzufügen">
+
+	</form>
+	<script src="/static/axios.min.js"></script>
+	<script src="/static/add-teacher.js"></script>
+</body>
+</html>

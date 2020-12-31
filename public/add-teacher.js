@@ -1,4 +1,4 @@
-let form = document.getElementById("form-edit");
+let form = document.getElementById("form-add");
 
 form.addEventListener("submit", processForm);
 
@@ -12,7 +12,7 @@ function processForm(e) {
   req["Note"] = document.getElementById("notefield").value;
 
   let request;
-  axios.put("/api/teachers/"+window.location.pathname.split("/")[3], req).then(function (res) {
+  axios.post("/api/teachers", req).then(function (res) {
       if(res.status == 200) {
         form.reset();
         //hiding form because chrome re-shows last input values

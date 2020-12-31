@@ -23,6 +23,7 @@ func SetupRoutes() {
 	rt.HandleFunc("/admin", pageAdmin)
 	rt.HandleFunc("/admin/unverifiedquotes/{id:[0-9]+}/edit", pageAdminUnverifiedQuotesIDEdit)
 	rt.HandleFunc("/admin/teachers/{id:[0-9]+}/edit", pageAdminTeachersIDEdit)
+	rt.HandleFunc("/admin/teachers/add", pageAdminTeachersAdd)
 
 	// /api/quotes
 	rt.HandleFunc("/api/quotes/submit", postAPIQuotesSubmit).Methods("POST")
