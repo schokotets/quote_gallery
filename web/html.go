@@ -18,14 +18,16 @@ func pageRoot(w http.ResponseWriter, r *http.Request) {
 	}
 
 	nquotes := database.GetQuotesAmount()
-	rangeBegin := 0
+	lastPage := (nquotes-1)/15
+
 	previousPage := -1
+	currentPage := 0
 	nextPage := 1
 
 	if pageQuery, ok := r.URL.Query()["page"]; ok {
 		page, err := strconv.Atoi(pageQuery[0])
 		if err == nil && page >= 0 && page*15 <= nquotes-1 {
-			rangeBegin = page * 15
+			currentPage = page
 			previousPage = page-1
 			nextPage = page+1
 		}
@@ -35,7 +37,7 @@ func pageRoot(w http.ResponseWriter, r *http.Request) {
 		nextPage = -1
 	}
 
-	quotes, err := database.GetNQuotesFrom(15, rangeBegin)
+	quotes, err := database.GetNQuotesFrom(15, currentPage*15)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -52,10 +54,14 @@ func pageRoot(w http.ResponseWriter, r *http.Request) {
 	data := struct {
 		Quotes	*[]database.QuoteT
 		Prev	int
+		Current	int
 		Next	int
-	}{quotes, previousPage, nextPage}
+		Last	int
+	}{quotes, previousPage, currentPage, nextPage, lastPage}
 
-	tmpl := template.Must(template.ParseFiles("pages/quotes.html"))
+	tmpl := template.Must(template.New("quotes.html").Funcs(template.FuncMap{
+		"inc": func (i int) int { return i+1 },
+	}).ParseFiles("pages/quotes.html"))
 	tmpl.Execute(w, data)
 }
 
