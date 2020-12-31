@@ -35,9 +35,11 @@
 					<a href="javascript:http('delete','/api/unverifiedquotes/{{.QuoteID}}')">delete</a>
 					&nbsp;
 					<a href="/admin/unverifiedquotes/{{.QuoteID}}/edit">edit</a>
-					{{if .TeacherID}}
 					&nbsp;
+					{{if .TeacherID}}
 					<a href="javascript:http('put','/api/unverifiedquotes/{{.QuoteID}}/confirm')">confirm</a>
+					{{else}}
+					<a href="/admin/teachers/add?name={{.TeacherName}}">create teacher</a>
 					{{end}}
 
 				</td>

@@ -8,6 +8,7 @@ import (
 	"quote_gallery/database"
 	"sort"
 	"strconv"
+	"strings"
 )
 
 //server returns HTML data
@@ -124,8 +125,29 @@ func pageAdminTeachersIDEdit(w http.ResponseWriter, r *http.Request) {
 }
 
 func pageAdminTeachersAdd(w http.ResponseWriter, r *http.Request) {
+	t := database.TeacherT{}
+	// parse ?name=Title Name (Note) with Title and Note being optional
+	// this is not expected to be perfect
+	if queryParam, ok := r.URL.Query()["name"]; ok {
+		name := queryParam[0]
+		parts := strings.SplitN(name, " ", 3)
+
+		switch len(parts) {
+		case 0:
+		case 1:
+			t.Name = strings.Trim(parts[0], " ")
+		case 2:
+			t.Title = strings.Trim(parts[0], " ")
+			t.Name = strings.Trim(parts[1], " ")
+		default:
+			t.Title = strings.Trim(parts[0], " ")
+			t.Name = strings.Trim(parts[1], " ")
+			noteWithoutParentheses := strings.ReplaceAll(strings.ReplaceAll(parts[2], "(", ""), ")", "")
+			t.Note = strings.Trim(noteWithoutParentheses, " ")
+		}
+	}
 	tmpl := template.Must(template.ParseFiles("pages/add-teacher.html"))
-	tmpl.Execute(w, nil)
+	tmpl.Execute(w, t)
 }
 
 func pageSubmit(w http.ResponseWriter, r *http.Request) {
