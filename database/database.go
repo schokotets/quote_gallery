@@ -210,9 +210,9 @@ func ExecuteQuery(query string) error {
 /*                          EXPORTED QUOTES FUNCTIONS                         */
 /* -------------------------------------------------------------------------- */
 
-// GetQuotes returns a slice containing all quotes
+// GetAllQuotes returns a slice containing all quotes
 // The weight variable will be zero
-func GetQuotes() (*[]QuoteT, error) {
+func GetAllQuotes() (*[]QuoteT, error) {
 	if database == nil {
 		return nil, errors.New("GetQuotes: not connected to database")
 	}
@@ -221,7 +221,30 @@ func GetQuotes() (*[]QuoteT, error) {
 	defer globalMutex.MinorUnlock()
 
 	// get quotes from cache
-	return unsafeGetQuotesFromCache(), nil
+	return unsafeGetAllQuotesFromCache(), nil
+}
+
+// GetNQuotesFrom returns a slice containing n quotes
+// starting from index from. May return fewer than n quotes.
+// The weight variable will be zero
+func GetNQuotesFrom(n, from int) (*[]QuoteT, error) {
+	if database == nil {
+		return nil, errors.New("GetQuotes: not connected to database")
+	}
+
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
+
+	// get quotes from cache
+	return unsafeGetNQuotesFromFromCache(n, from), nil
+}
+
+// GetQuotesAmount returns how many quotes there are
+func GetQuotesAmount() int {
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
+
+	return unsafeGetQuotesAmountFromCache()
 }
 
 // GetQuotesByString returns a slice containing all quotes

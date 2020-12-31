@@ -9,10 +9,16 @@
 <body>
 	<h1>Lehrerzitate</h1>
 	<a href="/submit">Zitat einsenden</a>
+	<br>
+	<br>
+	{{if not (eq -1 .Prev)}}<a id="previous" href="?page={{.Prev}}">eine Seite zurück</a>{{end}}
+	{{if not (eq -1 .Next)}}<a id="next" href="?page={{.Next}}">eine Seite weiter</a>{{end}}
 	<ol>
-		{{range .}}
+		{{range .Quotes}}
 		<li>{{if .Context}}{{.Context}}<br>{{end}}„{{.Text}}“ (TeacherID: {{.TeacherID}}) (QuoteID: {{.QuoteID}})</li>
 		{{end}}
 	</ol>
+	{{if not (eq -1 .Prev)}}<a id="previous" href="?page={{.Prev}}">eine Seite zurück</a>{{end}}
+	{{if not (eq -1 .Next)}}<a id="next" href="?page={{.Next}}">eine Seite weiter</a>{{end}}
 </body>
 </html>
