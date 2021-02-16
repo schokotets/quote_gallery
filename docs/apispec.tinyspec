@@ -95,6 +95,18 @@ ErrorT {error: s}
 		=> 404 Not Found
 		//..
 
+	POST /api/quotes/:id/unvote
+		=> 200 OK // don't complain if the user hadn't voted already
+		=> 404 Not Found
+		=> 401 Unauthorized
+		//..
+
+	POST /api/quotes/:id/vote
+		=> 200 OK // don't complain if the user had voted already
+		=> 404 Not Found
+		=> 401 Unauthorized
+		//..
+
 	//later... TODO:
 	DELETE /api/quotes/:id
 		=> 200 OK
