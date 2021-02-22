@@ -13,7 +13,7 @@ import (
 // totalOccurences  number of occurences of this word in all quotes
 // occurenceSlice   stores the number of occurences of this word for every quote
 type wordsMapT struct {
-	totalOccurences uint32
+	totalOccurences int32
 	occurenceSlice  []occurenceSliceT
 }
 
@@ -22,7 +22,7 @@ type wordsMapT struct {
 // count   number of occurences
 type occurenceSliceT struct {
 	enumID int32
-	count  uint32
+	count  int32
 }
 
 /* -------------------------------------------------------------------------- */
@@ -85,6 +85,9 @@ func unsafeLoadCache() error {
 		// Get id and text of quote
 		var q QuoteT
 		rows.Scan(&q.QuoteID, &q.TeacherID, &q.Context, &q.Text, &q.Unixtime, &q.Upvotes)
+		if err != nil {
+			return errors.New("unsafeLoadCache: parsing quotes failed: " + err.Error())
+		}
 
 		// add to local database
 		// unsafe, because cache is already locked for writing
@@ -114,6 +117,9 @@ func unsafeLoadCache() error {
 		// Get teacher data (id, name, title, note)
 		var t TeacherT
 		rows.Scan(&t.TeacherID, &t.Name, &t.Title, &t.Note)
+		if err != nil {
+			return errors.New("unsafeLoadCache: parsing teachers failed: " + err.Error())
+		}
 
 		// add to local database
 		// unsafe, because cache is already locked for writing
@@ -135,6 +141,8 @@ func unsafeClearCache() {
 // Just adds quote to cache (quoteSlice and wordsMap) without checking q.QuoteID
 // using addQuoteToCache without checking if q.QuoteID already exists may be fatal
 func unsafeAddQuoteToCache(q QuoteT) error {
+
+	q.Match = 0
 
 	cache.quoteSlice = append(cache.quoteSlice, q)
 	enumID := int32(len(cache.quoteSlice) - 1)
@@ -178,12 +186,15 @@ func unsafeOverwriteTeacherInCache(t TeacherT) error {
 	return nil
 }
 
+// Unixtime, Upvotes and Match fields will be ignored
 func unsafeOverwriteQuoteInCache(q QuoteT) error {
 
 	var enumID int32 = -1
 	for i, v := range cache.quoteSlice {
 		if v.QuoteID == q.QuoteID {
-			cache.quoteSlice[i] = q
+			cache.quoteSlice[i].Text = q.Text
+			cache.quoteSlice[i].Context = q.Context
+			cache.quoteSlice[i].TeacherID = q.TeacherID
 			enumID = int32(i)
 		}
 	}
@@ -232,8 +243,8 @@ func unsafeOverwriteQuoteInCache(q QuoteT) error {
 	return nil
 }
 
-func unsafeDeleteTeacherFromCache(ID uint32) error {
-	quotes := *unsafeGetAllQuotesFromCache()
+func unsafeDeleteTeacherFromCache(ID int32) error {
+	quotes := unsafeGetAllQuotesFromCache()
 	for _, q := range quotes {
 		if q.TeacherID == ID {
 			log.Print(q)
@@ -266,7 +277,7 @@ func unsafeDeleteTeacherFromCache(ID uint32) error {
 
 }
 
-func unsafeDeleteQuoteFromCache(ID uint32) error {
+func unsafeDeleteQuoteFromCache(ID int32) error {
 	var enumIDRemove int32 = -1
 	var enumIDReplace int32 = -1
 
@@ -331,7 +342,7 @@ func unsafeDeleteQuoteFromCache(ID uint32) error {
 
 // Returns maximum amount of n quotes from cache starting from index from.
 // Returns nil if starting index is too big.
-func unsafeGetNQuotesFromFromCache(n, from int) *[]QuoteT {
+func unsafeGetNQuotesFromFromCache(n, from int) []QuoteT {
 	if from >= len(cache.quoteSlice) {
 		return nil
 	}
@@ -340,26 +351,35 @@ func unsafeGetNQuotesFromFromCache(n, from int) *[]QuoteT {
 	}
 	quoteSlice := make([]QuoteT, n)
 	copy(quoteSlice, cache.quoteSlice[from:from+n])
-	return &quoteSlice
+	return quoteSlice
 }
 
-func unsafeGetAllQuotesFromCache() *[]QuoteT {
+func unsafeGetAllQuotesFromCache() []QuoteT {
 	quoteSlice := make([]QuoteT, len(cache.quoteSlice))
 	copy(quoteSlice, cache.quoteSlice)
-	return &quoteSlice
+	return quoteSlice
 }
 
 func unsafeGetQuotesAmountFromCache() int {
 	return len(cache.quoteSlice)
 }
 
-func unsafeGetTeachersFromCache() *[]TeacherT {
+func unsafeGetTeachersFromCache() []TeacherT {
 	teacherSlice := make([]TeacherT, len(cache.teacherSlice))
 	copy(teacherSlice, cache.teacherSlice)
-	return &teacherSlice
+	return teacherSlice
 }
 
-func unsafeGetQuotesByStringFromCache(text string) *[]QuoteT {
+func unsafeGetTeacherByIDFromCache(ID int32) (TeacherT, bool) {
+	for _, teacher := range cache.teacherSlice {
+		if teacher.TeacherID == ID {
+			return teacher, true
+		}
+	}
+	return TeacherT{}, false
+}
+
+func unsafeGetQuotesByStringFromCache(text string) []QuoteT {
 
 	quoteSlice := make([]QuoteT, len(cache.quoteSlice))
 	copy(quoteSlice, cache.quoteSlice)
@@ -372,7 +392,7 @@ func unsafeGetQuotesByStringFromCache(text string) *[]QuoteT {
 			quoteSlice[v.enumID].Match += float32(v.count) / float32(wordsMapItem.totalOccurences)
 		}
 	}
-	return &quoteSlice
+	return quoteSlice
 }
 
 // PrintWordsMap is a debugging function

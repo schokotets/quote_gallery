@@ -20,17 +20,19 @@
 </head>
 <body>
 	<h1>Lehrerzitate</h1>
-	<a href="/submit">Zitat einsenden</a>
-	<br>
+	<a class="submitbtn" href="/submit">Zitat einsenden</a>
 	<br>
 	{{template "NAVIGATION" .}}
-
-	<ol>
+	<div class="quotelist">
 		{{range .Quotes}}
-		<li>{{if .Context}}{{.Context}}<br>{{end}}„{{.Text}}“ (TeacherID: {{.TeacherID}}) (QuoteID: {{.QuoteID}})</li>
+		<div class="quote">
+			<i><span class="id">Zitat #{{.QuoteID}}</span></i><br>
+			{{if .Context}}Situation: {{.Context}}<br>{{end}}
+			<span class="text" style="display:block">„{{.Text}}“</span>
+			<span class="teacher">~ {{with (GetTeacherByID .TeacherID)}}{{.Title}} {{.Name}}{{if .Note}} ({{.Note}}){{end}}{{end}}</span>
+		</div>
 		{{end}}
-	</ol>
-
+	</div>
 	{{template "NAVIGATION" .}}
 </body>
 </html>

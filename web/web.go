@@ -3,18 +3,42 @@ package web
 import (
 	"log"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
 //SetupRoutes configures which paths are handled by which functions
 func SetupRoutes() {
-	http.HandleFunc("/", pageRoot)
+	rt := mux.NewRouter()
+
+	rt.HandleFunc("/", pageRoot)
 
 	handlerFiles := http.FileServer(http.Dir("./public"))
-	http.Handle("/static/", http.StripPrefix("/static/", handlerFiles))
+	rt.PathPrefix("/static/").Handler(http.StripPrefix("/static/", handlerFiles))
 
-	http.HandleFunc("/submit", pageSubmit)
+	// pages
+	rt.HandleFunc("/submit", pageSubmit)
 
-	http.HandleFunc("/api/quotes/submit", handlerAPIQuotesSubmit)
+	// admin pages
+	rt.HandleFunc("/admin", pageAdmin)
+	rt.HandleFunc("/admin/unverifiedquotes/{id:[0-9]+}/edit", pageAdminUnverifiedQuotesIDEdit)
+	rt.HandleFunc("/admin/teachers/{id:[0-9]+}/edit", pageAdminTeachersIDEdit)
+	rt.HandleFunc("/admin/teachers/add", pageAdminTeachersAdd)
+
+	// /api/quotes
+	rt.HandleFunc("/api/quotes/submit", postAPIQuotesSubmit).Methods("POST")
+
+	// /api/unverifiedquotes
+	rt.HandleFunc("/api/unverifiedquotes/{id:[0-9]+}", putAPIUnverifiedQuotesID).Methods("PUT")
+	rt.HandleFunc("/api/unverifiedquotes/{id:[0-9]+}", deleteAPIUnverifiedQuotesID).Methods("DELETE")
+	rt.HandleFunc("/api/unverifiedquotes/{id:[0-9]+}/confirm", putAPIUnverifiedQuotesIDConfirm).Methods("PUT")
+
+	// /api/teachers
+	rt.HandleFunc("/api/teachers", postAPITeachers).Methods("POST")
+	rt.HandleFunc("/api/teachers/{id:[0-9]+}", putAPITeachersID).Methods("PUT")
+
+	// Direct http handling to gorilla/mux router
+	http.Handle("/", rt)
 }
 
 //StartWebserver runs the go http.ListenAndServe web server

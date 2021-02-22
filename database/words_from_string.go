@@ -6,10 +6,10 @@ import (
 )
 
 // turns a given string to a wordCountMap
-func getWordsFromString(s string) map[string]uint32 {
+func getWordsFromString(s string) map[string]int32 {
 	var buffer bytes.Buffer
 	buffer.Reset()
-	wordCountMap := make(map[string]uint32)
+	wordCountMap := make(map[string]int32)
 
 	for _, r := range s {
 

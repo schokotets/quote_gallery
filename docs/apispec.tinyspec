@@ -12,44 +12,40 @@
 
 // MODELS
 
-TeacherT {TeacherID: i, Name: s, Title: s, Note: s}
-TeacherSubmissionT {Name: s, Title: s, Note: s}
+// for writing:
+QuoteInputT {Teacher: i|s, Context: s, Text: s}
+TeacherInputT {Name: s, Title: s, Note: s}
 
+// for reading:
 UnverifiedQuoteT {QuoteID: i, Teacher: i|s, Context: s, Text: s, Unixtime i}
-QuoteSubmissionT {Teacher: i|s, Context: s, Text: s}
-QuoteChangeT {Teacher?: i|s, Context?: s, Text?: s}
-QuoteT {QuoteID?: i, Teacher: TeacherT, Context: s, Text: s, Unixtime: i, Upvotes: i}
+QuoteT {QuoteID: i, Teacher: TeacherT, Context: s, Text: s, Unixtime: i, Upvotes: i}
+TeacherT {TeacherID: i, Name: s, Title: s, Note: s}
 
 ErrorT {error: s}
 
 
 // USER ROUTES
 
-	//TODO:
-	// password-protected (http basic auth)
+	//TODO: password-protected (http basic auth)
 
 	// pages:
-	//TODO:
-	// /?sortby?=(teachername|time)&page?=i
-	// /submit
+	// - /submit -> later... TODO: suggest similar
+	// - TODO: /?sortby?=(teachername|time)&page?=i
 
-	//TODO:
-	POST /api/quotes/submit QuoteSubmissionT
-		=> {quote: UnverifiedQuoteT}
+	POST /api/quotes/submit QuoteInputT
+		=> 200 OK
 		=> 401 Unauthorized
 		=> 400 /*Bad Request*/ ErrorT
-		//..
+		=> 500 Internal Server Error
 
-	//later...
-
-	//TODO:
+	//later... TODO:
 	POST /api/quotes/:id/upvote
 		=> 200 OK
 		=> 401 Unauthorized
 		=> 404 Not Found
 		//..
 
-	//TODO:
+	//later... TODO:
 	POST /api/quotes/similar {text: s}
 		=> {quotes: QuoteT[]}
 		=> 204 No Content
@@ -60,55 +56,53 @@ ErrorT {error: s}
 
 // ADMIN ROUTES
 
-	//TODO:
-	// password-protected (http basic auth)
+	//TODO: password-protected (http basic auth)
 
 	// pages:
-	//TODO:
-	// - /admin/quotes
-	//TODO:
-	// - later... /admin/teacher
+	// - /admin/unverifiedquotes -> TODO: functionality
+	// - TODO: /admin/quotes
+	// - later... TODO: /admin/teacher
 
-	//edit unverifiedquote:
-	//TODO:
-	PATCH /api/unverifiedquotes/:id QuoteChangeT
+	PUT /api/unverifiedquotes/:id QuoteInputT
 		=> UnverifiedQuoteT
 		=> 400 /*Bad Request*/ ErrorT
 		=> 401 Unauthorized
 		=> 404 Not Found
 		//..
 
-	//TODO:
 	DELETE /api/unverifiedquotes/:id
 		=> 200 OK
 		=> 404 Not Found
 		=> 401 Unauthorized
 		//..
 
-	//TODO:
 	PUT /api/unverifiedquotes/:id/confirm
 		=> 200 OK
 		=> 404 Not Found
 		=> 401 Unauthorized
 		//..
 
-	//TODO:
-	POST /api/teachers TeacherSubmissionT
+	POST /api/teachers TeacherInputT
 		=> 200 OK
-		=> 404 Not Found
+		=> 400 /*Bad Request*/ ErrorT
 		=> 401 Unauthorized
 		//..
+	
+	PUT /api/teachers/:id TeacherInputT
+		=> 200 OK
+		=> 400 /*Bad Request*/ ErrorT
+		=> 401 Unauthorized
+		=> 404 Not Found
+		//..
 
-	//later...
-
-	//TODO:
+	//later... TODO:
 	DELETE /api/quotes/:id
 		=> 200 OK
 		=> 404 Not Found
 		=> 401 Unauthorized
 		//..
 
-	//TODO:
+	//later... TODO:
 	GET /api/unverifiedquotes/:id/similar
 		=> {quotes: QuoteT[]}
 		=> 404 Not Found

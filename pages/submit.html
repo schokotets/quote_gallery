@@ -8,23 +8,35 @@
 </head>
 <body>
 	<h1>Zitat einsenden</h1>
-	<form action="/api/submitquote" method="post">
+	<form id="form-submit" method="post">
 		<label for="quotefield">Zitat:</label>
 		<input class="fullwidth" id="quotefield" name="text" type="text" required>
 		<br>
+
 		<label for="contextfield">Kontext (Situation; optional):</label>
 		<input class="fullwidth" id="contextfield" name="context" type="text">
 		<br>
-		<label for="teacherfield">Lehrer:</label>
-		<select id="teacherfield" name="teacherid" required>
+
+		<label for="teacherselect">Lehrer:</label>
+		<select id="teacherselect" name="teacherid" required>
 			<option value="" selected disabled hidden></option>
+			<option value=""><i>selbst eingeben...</i></option>
 			{{range .}}
 			<option value="{{.TeacherID}}">{{.Name}}, {{.Title}}{{if .Note}} ({{.Note}}){{end}}</option>
 			{{end}}
 		</select>
 		<br>
+
+		<div class="customteacher" style="display: none">
+			<label for="customteacherfield">Name des Lehrers (bitte eindeutig, gern mit Notiz in Klammern):</label>
+			<input class="fullwidth" id="customteacherfield" name="teachername" type="text" placeholder="Frau Mustermann (En De)">
+			<br>
+		</div>
+
 		<input type="submit" value="Einsenden">
 
 	</form>
+	<script src="/static/axios.min.js"></script>
+	<script src="/static/submit.js"></script>
 </body>
 </html>
