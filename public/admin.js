@@ -16,7 +16,7 @@ function http(method, url) {
       console.error(err);
     });
 
-  return true;
+  return undefined;
 }
 
 
