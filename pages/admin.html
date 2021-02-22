@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+	<meta charset="UTF-8">
+	<title>Adminbereich</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="/static/style.css" media="all">
+</head>
+<body style="max-width: unset">
+	<h1>Adminbereich</h1>
+	<h2>Unbestätigte Zitate</h2>
+	<table>
+		<thead>
+			<tr>
+				<th>ID</th>
+				<th>Teacher</th>
+				<th>Context</th>
+				<th>Text</th>
+				<th>Unixtime</th>
+				<th>IPHash</th>
+				<th>OPERATIONS</th>
+			</tr>
+		</thead>
+		<tbody>
+			{{range .Quotes}}
+			<tr>
+				<td>#{{.QuoteID}}</td>
+				<td>{{if .TeacherID}}{{with (GetTeacherByID .TeacherID)}}#{{.TeacherID}}: {{.Title}} {{.Name}}{{if .Note}} ({{.Note}}){{end}}{{end}}{{end}}
+					{{if .TeacherName}}{{.TeacherName}}{{end}}</td>
+				<td>{{.Context}}</td>
+				<td>{{.Text}}</td>
+				<td>{{.Unixtime}}</td>
+				<td>{{.IPHash}}</td>
+				<td>
+					<a href="javascript:http('delete','/api/unverifiedquotes/{{.QuoteID}}')">delete</a>
+					&nbsp;
+					<a href="/admin/unverifiedquotes/{{.QuoteID}}/edit">edit</a>
+					&nbsp;
+					{{if .TeacherID}}
+					<a href="javascript:http('put','/api/unverifiedquotes/{{.QuoteID}}/confirm')">confirm</a>
+					{{else}}
+					<a href="/admin/teachers/add?name={{.TeacherName}}">create teacher</a>
+					{{end}}
+
+				</td>
+			</tr>
+			{{end}}
+		</tbody>
+	</table>
+	<br>
+
+	<h2>Lehrer</h2>
+	<a href="/admin/teachers/add">add</a>
+	<table>
+		<thead>
+			<tr>
+				<th>ID</th>
+				<th>Title</th>
+				<th>Name</th>
+				<th>Note</th>
+				<th>OPERATIONS</th>
+			</tr>
+		</thead>
+		<tbody>
+			{{range .Teachers}}
+			<tr>
+				<td>#{{.TeacherID}}</td>
+				<td>{{.Title}}</td>
+				<td>{{.Name}}</td>
+				<td>{{.Note}}</td>
+				<td>
+					<a href="/admin/teachers/{{.TeacherID}}/edit">edit</a>
+				</td>
+			</tr>
+			{{end}}
+		</tbody>
+	</table>
+
+	<script src="/static/axios.min.js"></script>
+	<script src="/static/admin.js"></script>
+</body>
+</html>
