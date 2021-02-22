@@ -1,13 +1,15 @@
 {{define "NAVIGATION"}}
-<a class="first" {{if eq -1 .Prev}}disabled{{else}}href="?page=0"{{end}}>&lt;&lt;</a>
-&nbsp;
-<a class="previous" {{if eq -1 .Prev}}disabled{{else}}href="?page={{.Prev}}"{{end}}>&lt;</a>
-&nbsp;
-<span class="pageIndex">Seite {{inc .Current}} von {{inc .Last}}</span>
-&nbsp;
-<a class="next" {{if eq -1 .Next}}disabled{{else}}href="?page={{.Next}}"{{end}}>&gt;</a>
-&nbsp;
-<a class="last" {{if eq .Current .Last}}disabled{{else}}href="?page={{.Last}}"{{end}}>&gt;&gt;</a>
+<div class="navigation">
+	<a class="first" {{if eq -1 .Prev}}disabled{{else}}href="?page=0"{{end}}>&lt;&lt;</a>
+	&nbsp;
+	<a class="previous" {{if eq -1 .Prev}}disabled{{else}}href="?page={{.Prev}}"{{end}}>&lt;</a>
+	&nbsp;
+	<span class="pageIndex">Seite {{inc .Current}} von {{inc .Last}}</span>
+	&nbsp;
+	<a class="next" {{if eq -1 .Next}}disabled{{else}}href="?page={{.Next}}"{{end}}>&gt;</a>
+	&nbsp;
+	<a class="last" {{if eq .Current .Last}}disabled{{else}}href="?page={{.Last}}"{{end}}>&gt;&gt;</a>
+</div>
 {{end}}
 
 <!DOCTYPE html>
@@ -20,8 +22,9 @@
 </head>
 <body>
 	<h1>Lehrerzitate</h1>
-	<a class="submitbtn" href="/submit">Zitat einsenden</a>
-	<br>
+	<div class="buttonrow">
+		<a class="submitbtn" href="/submit">Zitat einsenden</a>
+	</div>
 	{{template "NAVIGATION" .}}
 	<div class="quotelist">
 		{{range .Quotes}}
