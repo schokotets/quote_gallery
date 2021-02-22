@@ -10,6 +10,8 @@ import (
 
 //server returns HTML data
 
+const quotesPerPage = 15
+
 func pageRoot(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		w.WriteHeader(404)
@@ -18,7 +20,7 @@ func pageRoot(w http.ResponseWriter, r *http.Request) {
 	}
 
 	nquotes := database.GetQuotesAmount()
-	lastPage := (nquotes-1)/15
+	lastPage := (nquotes-1)/quotesPerPage
 
 	previousPage := -1
 	currentPage := 0
@@ -26,25 +28,25 @@ func pageRoot(w http.ResponseWriter, r *http.Request) {
 
 	if pageQuery, ok := r.URL.Query()["page"]; ok {
 		page, err := strconv.Atoi(pageQuery[0])
-		if err == nil && page >= 0 && page*15 <= nquotes-1 {
+		if err == nil && page >= 0 && page*quotesPerPage <= nquotes-1 {
 			currentPage = page
 			previousPage = page-1
 			nextPage = page+1
 		}
 	}
 
-	if nquotes <= nextPage*15 {
+	if nquotes <= nextPage*quotesPerPage {
 		nextPage = -1
 	}
 
-	quotes, err := database.GetNQuotesFrom(15, currentPage*15)
+	quotes, err := database.GetNQuotesFrom(quotesPerPage, currentPage*quotesPerPage)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	if quotes == nil {
-		quotes, err = database.GetNQuotesFrom(15, 0)
+		quotes, err = database.GetNQuotesFrom(quotesPerPage, 0)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
