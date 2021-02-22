@@ -329,6 +329,8 @@ func unsafeDeleteQuoteFromCache(ID uint32) error {
 	return nil
 }
 
+// Returns maximum amount of n quotes from cache starting from index from.
+// Returns nil if starting index is too big.
 func unsafeGetNQuotesFromFromCache(n, from int) *[]QuoteT {
 	if from >= len(cache.quoteSlice) {
 		return nil
