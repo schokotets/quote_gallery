@@ -170,6 +170,7 @@ func unsafeClearCache() {
 	cache.quoteSlice = nil
 	cache.teacherSlice = nil
 	cache.wordsMap = nil
+	cache.userSlice = nil
 }
 
 // Just adds quote to cache (quoteSlice and wordsMap) without checking q.QuoteID
