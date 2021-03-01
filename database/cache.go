@@ -3,6 +3,7 @@ package database
 import (
 	"errors"
 	"log"
+	"strings"
 )
 
 /* -------------------------------------------------------------------------- */
@@ -431,6 +432,17 @@ func unsafeGetQuotesByStringFromCache(text string) []QuoteT {
 		}
 	}
 	return quoteSlice
+}
+
+func unsafeGetUserFromCache(name string, password string) UserT {
+	for _, user := range cache.userSlice {
+		 if strings.EqualFold(name, user.Name) && password == user.Password {
+			return user
+		 } 
+	}
+
+	// UserID beeing zero indicates no valid teacher has been found
+	return UserT{}
 }
 
 // PrintWordsMap is a debugging function

@@ -866,3 +866,36 @@ func DeleteUnverifiedQuote(ID int32) error {
 
 	return nil
 }
+
+
+/* -------------------------------------------------------------------------- */
+/*                          EXPORTED USERS FUNCTIONS                          */
+/* -------------------------------------------------------------------------- */
+
+// IsUser checks if a user with the given username and password exists
+// If the user exists a UserID != 0 is returned
+//
+// Possible returned error types: -
+func IsUser(name string, password string) int32 {
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
+	
+	return unsafeGetUserFromCache(name, password).UserID
+}
+
+
+// IsAdmin checks if a user with the given username and password exists and
+// if this user has admin priviliges
+// If the user exists a UserID != 0 is returned
+//
+// Possible returned error types: -
+func IsAdmin(name string, password string) int32 {
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
+
+	user := unsafeGetUserFromCache(name, password)
+	if user.Admin {
+		return user.UserID
+	}
+	return 0
+}
