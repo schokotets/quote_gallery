@@ -64,6 +64,19 @@ type TeacherT struct {
 	Note      string
 }
 
+// UserT stores one user
+// UserID    the unique identifier of the user
+// Name      the user's name
+// Password  the user's password
+// Admin     flag if the user has admin priviliges 
+type UserT struct {
+	UserID   int32
+	Name     string
+	Password string
+	Admin    bool
+}
+
+
 /* -------------------------------------------------------------------------- */
 /*                          GLOBAL PACKAGE VARIABLES                          */
 /* -------------------------------------------------------------------------- */
@@ -174,6 +187,19 @@ func Initialize() error {
 	if err != nil {
 		database.Close()
 		return DBError{ "Initialize: creating unverifiedQuotes table failed", err }
+	}
+
+	// Create users table in database if it doesn't exist
+	// for more information see UserT declaration
+	_, err = database.Exec(
+		`CREATE TABLE IF NOT EXISTS users (
+		UserID serial PRIMARY KEY,
+		Name varchar,
+		Password varchar,
+		Admin boolean)`)
+	if err != nil {
+		database.Close()
+		return DBError{ "Initialize: creating users table failed", err }
 	}
 
 	unsafeLoadCache()
