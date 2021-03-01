@@ -244,7 +244,7 @@ func unsafeOverwriteQuoteInCache(q QuoteT) error {
 }
 
 func unsafeDeleteTeacherFromCache(ID int32) error {
-	quotes := unsafeGetQuotesFromCache()
+	quotes := unsafeGetAllQuotesFromCache()
 	for _, q := range quotes {
 		if q.TeacherID == ID {
 			log.Print(q)
@@ -340,10 +340,28 @@ func unsafeDeleteQuoteFromCache(ID int32) error {
 	return nil
 }
 
-func unsafeGetQuotesFromCache() []QuoteT {
+// Returns maximum amount of n quotes from cache starting from index from.
+// Returns nil if starting index is too big.
+func unsafeGetNQuotesFromFromCache(n, from int) []QuoteT {
+	if from >= len(cache.quoteSlice) {
+		return nil
+	}
+	if from + n >= len(cache.quoteSlice) {
+		n = len(cache.quoteSlice) - from
+	}
+	quoteSlice := make([]QuoteT, n)
+	copy(quoteSlice, cache.quoteSlice[from:from+n])
+	return quoteSlice
+}
+
+func unsafeGetAllQuotesFromCache() []QuoteT {
 	quoteSlice := make([]QuoteT, len(cache.quoteSlice))
 	copy(quoteSlice, cache.quoteSlice)
 	return quoteSlice
+}
+
+func unsafeGetQuotesAmountFromCache() int {
+	return len(cache.quoteSlice)
 }
 
 func unsafeGetTeachersFromCache() []TeacherT {
