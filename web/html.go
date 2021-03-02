@@ -2,13 +2,14 @@ package web
 
 import (
 	"fmt"
-	"github.com/gorilla/mux"
 	"html/template"
 	"net/http"
 	"quote_gallery/database"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/gorilla/mux"
 )
 
 //server returns HTML data
@@ -71,7 +72,7 @@ func pageRoot(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, data)
 }
 
-func pageAdmin(w http.ResponseWriter, r *http.Request) {
+func pageAdmin(w http.ResponseWriter, r *http.Request, u int32) {
 	quotes, err := database.GetUnverifiedQuotes()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -107,7 +108,7 @@ func pageAdmin(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func pageAdminUnverifiedQuotesIDEdit(w http.ResponseWriter, r *http.Request) {
+func pageAdminUnverifiedQuotesIDEdit(w http.ResponseWriter, r *http.Request, u int32) {
 	id, err := strconv.Atoi(mux.Vars(r)["id"])
 	if err != nil {
 		// This should not happen as handlerAPIUnverifiedQuotes is only called if
@@ -143,7 +144,7 @@ func pageAdminUnverifiedQuotesIDEdit(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, editdata)
 }
 
-func pageAdminTeachersIDEdit(w http.ResponseWriter, r *http.Request) {
+func pageAdminTeachersIDEdit(w http.ResponseWriter, r *http.Request, u int32) {
 	id, err := strconv.Atoi(mux.Vars(r)["id"])
 	if err != nil {
 		// This should not happen as handlerAPIUnverifiedQuotes is only called if
@@ -164,7 +165,7 @@ func pageAdminTeachersIDEdit(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, teacher)
 }
 
-func pageAdminTeachersAdd(w http.ResponseWriter, r *http.Request) {
+func pageAdminTeachersAdd(w http.ResponseWriter, r *http.Request, u int32) {
 	t := database.TeacherT{}
 	// parse ?name=Title Name (Note) with Title and Note being optional
 	// this is not expected to be perfect
@@ -190,7 +191,7 @@ func pageAdminTeachersAdd(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, t)
 }
 
-func pageSubmit(w http.ResponseWriter, r *http.Request) {
+func pageSubmit(w http.ResponseWriter, r *http.Request, u int32) {
 	teachers, err := database.GetTeachers()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

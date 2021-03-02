@@ -6,29 +6,31 @@ import (
 )
 
 // adminAuth handles admin authorization
-func adminAuth(handler http.HandlerFunc) http.HandlerFunc {
+func adminAuth(handler func(w http.ResponseWriter, r *http.Request, u int32)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user, password, ok := r.BasicAuth()
-		if !ok || database.IsAdmin(user, password) == 0 {
+		u := database.IsAdmin(user, password)
+		if !ok || u == 0 {
 			w.Header().Set("WWW-Authenticate", `Basic realm="You need admin priviliges"`)
 			w.WriteHeader(401)
 			w.Write([]byte("You are unauthorized.\n"))
 			return
 	  	}
-	  	handler(w, r)
+	  	handler(w, r, u)
 	}
 }
 
 // userAuth handles user authorization
-func userAuth(handler http.HandlerFunc) http.HandlerFunc {
+func userAuth(handler func(w http.ResponseWriter, r *http.Request, u int32)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user, password, ok := r.BasicAuth()
-		if !ok || database.IsUser(user, password) == 0 {
+		u := database.IsUser(user, password)
+		if !ok || u == 0 {
 			w.Header().Set("WWW-Authenticate", `Basic realm="You need user priviliges"`)
 			w.WriteHeader(401)
 			w.Write([]byte("You are unauthorized.\n"))
 			return
 	  	}
-	  	handler(w, r)
+	  	handler(w, r, u)
 	}
 }
