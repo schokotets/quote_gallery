@@ -202,6 +202,16 @@ func Initialize() error {
 		return DBError{ "Initialize: creating users table failed", err }
 	}
 
+	// Create votes table in database if it doesn't exist
+	_, err = database.Exec(
+		`CREATE TABLE IF NOT EXISTS votes (
+		UserID integer REFERENCES users (UserID) ON DELETE CASCADE,
+		QuoteID integer REFERENCES quotes (QuoteID) ON DELETE CASCADE)`)
+	if err != nil {
+		database.Close()
+		return DBError{ "Initialize: creating votes table failed", err }
+	}
+
 	unsafeLoadCache()
 
 	return nil
