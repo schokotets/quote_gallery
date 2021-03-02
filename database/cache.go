@@ -43,6 +43,7 @@ var cache struct {
 	teacherSlice []TeacherT
 	wordsMap     map[string]wordsMapT
 	userSlice    []UserT
+	voteSlice    [][]int32
 }
 
 /* -------------------------------------------------------------------------- */
@@ -72,8 +73,7 @@ func unsafeLoadCache() error {
 		TeacherID, 
 		Context,
 		Text,
-		Unixtime,
-		Upvotes FROM quotes`)
+		Unixtime FROM quotes`)
 
 	if err != nil {
 		return errors.New("unsafeLoadCache: loading quotes from database failed: " + err.Error())
@@ -86,7 +86,7 @@ func unsafeLoadCache() error {
 	for rows.Next() {
 		// Get id and text of quote
 		var q QuoteT
-		rows.Scan(&q.QuoteID, &q.TeacherID, &q.Context, &q.Text, &q.Unixtime, &q.Upvotes)
+		rows.Scan(&q.QuoteID, &q.TeacherID, &q.Context, &q.Text, &q.Unixtime)
 		if err != nil {
 			return errors.New("unsafeLoadCache: parsing quotes failed: " + err.Error())
 		}
@@ -162,6 +162,34 @@ func unsafeLoadCache() error {
 
 	rows.Close()
 
+	/* ---------------------------------- VOTES --------------------------------- */
+
+	// get all votes from database
+	rows, err = database.Query(`SELECT 
+		UserID,
+		QuoteID FROM votes`)
+
+	if err != nil {
+		return errors.New("unsafeLoadCache: loading votes from database failed: " + err.Error())
+	}
+
+	// Iterrate over all votes from database
+	for rows.Next() {
+		// Get vote data (userid, quoteid)
+		var u, q int32
+
+		rows.Scan(&u, &q)
+		if err != nil {
+			return errors.New("unsafeLoadCache: parsing votes failed: " + err.Error())
+		}
+
+		// add to local database
+		// unsafe, because cache is already locked for writing
+		unsafeAddVoteToCache(u, q)
+	}
+
+	rows.Close()
+
 	log.Print("Filled cache successfully")
 	return nil
 }
@@ -209,6 +237,33 @@ func unsafeAddUserToCache(u UserT) {
 	cache.userSlice = append(cache.userSlice, u)
 }
 
+// unsafe functions aren't concurrency safe
+func unsafeAddVoteToCache(u int32, q int32) {
+	if u < 1 {
+		// u must be greater than zero to be a valid UserID
+		return
+	}
+
+	for len(cache.voteSlice) < int(u) {
+		cache.voteSlice = append(cache.voteSlice, []int32{})
+	}
+
+	for _,v := range cache.voteSlice[u-1] {
+		if v == q {
+			return
+		}
+	}
+
+	cache.voteSlice[u-1] = append(cache.voteSlice[u-1], q)
+
+	for i,v := range cache.quoteSlice {
+		if v.QuoteID == q {
+			cache.quoteSlice[i].Upvotes++
+			break
+		}
+	}
+}
+
 func unsafeOverwriteTeacherInCache(t TeacherT) error {
 
 	affected := false
@@ -226,7 +281,7 @@ func unsafeOverwriteTeacherInCache(t TeacherT) error {
 	return nil
 }
 
-// Unixtime, Upvotes and Match fields will be ignored
+// Unixtime, Voted, Upvotes and Match fields will be ignored
 func unsafeOverwriteQuoteInCache(q QuoteT) error {
 
 	var enumID int32 = -1
@@ -454,4 +509,14 @@ func PrintWordsMap() {
 // PrintUserSlice is a debugging function
 func PrintUserSlice() {
 	log.Print(cache.userSlice)
+}
+
+// PrintVoteSlice is a debugging function
+func PrintVoteSlice() {
+	log.Print(cache.voteSlice)
+}
+
+// PrintQuoteSlice is a debugging function
+func PrintQuoteSlice() {
+	log.Print(cache.quoteSlice)
 }

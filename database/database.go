@@ -20,8 +20,9 @@ import (
 // Context    the context of the quote
 // Text       the text of the quote itself
 // Unixtime   the time of submission; optional
-// Upvotes    optional
 //
+// Voted	  exists only locally, not saved in database! \ Created from
+// Upvotes    exists only locally, not saved in database! / votes table
 // Match      exists only locally, not saved in database!
 //              (used by GetQuotesFromString to quantify how well this quote fits the string)
 type QuoteT struct {
@@ -30,6 +31,7 @@ type QuoteT struct {
 	Context   string
 	Text      string
 	Unixtime  int64
+	Voted     bool
 	Upvotes   int32
 	Match     float32
 }
@@ -166,8 +168,7 @@ func Initialize() error {
 		TeacherID integer REFERENCES teachers (TeacherID) ON DELETE CASCADE, 
 		Context varchar,
 		Text varchar,
-		Unixtime bigint,
-		Upvotes integer)`)
+		Unixtime bigint)`)
 	if err != nil {
 		database.Close()
 		return DBError{ "Initialize: creating quotes table failed", err }
@@ -334,8 +335,8 @@ func CreateQuote(q QuoteT) error {
 
 	// add quote to database
 	err = database.QueryRow(
-		`INSERT INTO quotes (TeacherID, Context, Text, Unixtime, Upvotes) VALUES ($1, $2, $3, $4, $5) RETURNING QuoteID`,
-		q.TeacherID, q.Context, q.Text, q.Unixtime, q.Upvotes).Scan(&q.QuoteID)
+		`INSERT INTO quotes (TeacherID, Context, Text, Unixtime) VALUES ($1, $2, $3, $4) RETURNING QuoteID`,
+		q.TeacherID, q.Context, q.Text, q.Unixtime).Scan(&q.QuoteID)
 	if err != nil {
 		if strings.Contains(err.Error(), "violates foreign key constraint") {
 			return InvalidTeacherIDError{ "CreateQuote: no teacher with given TeacherID" }
@@ -350,7 +351,7 @@ func CreateQuote(q QuoteT) error {
 }
 
 // UpdateQuote updates an existing quote by given QuoteID.
-// Upvotes and Unixtime fields will be ignored.
+// Voted, Upvotes and Unixtime fields will be ignored.
 //
 // Possible returned error types: generic / DBError / InvalidTeacherIDError / InvalidQuoteIDError
 func UpdateQuote(q QuoteT) error {
