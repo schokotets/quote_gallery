@@ -64,6 +64,19 @@ type TeacherT struct {
 	Note      string
 }
 
+// UserT stores one user
+// UserID    the unique identifier of the user
+// Name      the user's name
+// Password  the user's password
+// Admin     flag if the user has admin priviliges 
+type UserT struct {
+	UserID   int32
+	Name     string
+	Password string
+	Admin    bool
+}
+
+
 /* -------------------------------------------------------------------------- */
 /*                          GLOBAL PACKAGE VARIABLES                          */
 /* -------------------------------------------------------------------------- */
@@ -174,6 +187,19 @@ func Initialize() error {
 	if err != nil {
 		database.Close()
 		return DBError{ "Initialize: creating unverifiedQuotes table failed", err }
+	}
+
+	// Create users table in database if it doesn't exist
+	// for more information see UserT declaration
+	_, err = database.Exec(
+		`CREATE TABLE IF NOT EXISTS users (
+		UserID serial PRIMARY KEY,
+		Name varchar,
+		Password varchar,
+		Admin boolean)`)
+	if err != nil {
+		database.Close()
+		return DBError{ "Initialize: creating users table failed", err }
 	}
 
 	unsafeLoadCache()
@@ -839,4 +865,37 @@ func DeleteUnverifiedQuote(ID int32) error {
 	}
 
 	return nil
+}
+
+
+/* -------------------------------------------------------------------------- */
+/*                          EXPORTED USERS FUNCTIONS                          */
+/* -------------------------------------------------------------------------- */
+
+// IsUser checks if a user with the given username and password exists
+// If the user exists a UserID != 0 is returned
+//
+// Possible returned error types: -
+func IsUser(name string, password string) int32 {
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
+	
+	return unsafeGetUserFromCache(name, password).UserID
+}
+
+
+// IsAdmin checks if a user with the given username and password exists and
+// if this user has admin priviliges
+// If the user exists a UserID != 0 is returned
+//
+// Possible returned error types: -
+func IsAdmin(name string, password string) int32 {
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
+
+	user := unsafeGetUserFromCache(name, password)
+	if user.Admin {
+		return user.UserID
+	}
+	return 0
 }

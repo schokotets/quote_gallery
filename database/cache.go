@@ -3,6 +3,7 @@ package database
 import (
 	"errors"
 	"log"
+	"strings"
 )
 
 /* -------------------------------------------------------------------------- */
@@ -41,6 +42,7 @@ var cache struct {
 	quoteSlice   []QuoteT
 	teacherSlice []TeacherT
 	wordsMap     map[string]wordsMapT
+	userSlice    []UserT
 }
 
 /* -------------------------------------------------------------------------- */
@@ -128,6 +130,38 @@ func unsafeLoadCache() error {
 
 	rows.Close()
 
+	/* ---------------------------------- USERS --------------------------------- */
+
+	// get all users from database
+	rows, err = database.Query(`SELECT 
+		UserID,
+		Name, 
+		Password,
+		Admin FROM users`)
+
+	if err != nil {
+		return errors.New("unsafeLoadCache: loading users from database failed: " + err.Error())
+	}
+
+	// Iterrate over all users from database
+	for rows.Next() {
+		// Get user data (id, name, password admin)
+		var u UserT
+		rows.Scan(&u.UserID, &u.Name, &u.Password, &u.Admin)
+		if err != nil {
+			return errors.New("unsafeLoadCache: parsing users failed: " + err.Error())
+		}
+
+		// add to local database
+		// unsafe, because cache is already locked for writing
+		unsafeAddUserToCache(u)
+		if err != nil {
+			return errors.New("unsafeLoadCache: adding user to cache failed: " + err.Error())
+		}
+	}
+
+	rows.Close()
+
 	log.Print("Filled cache successfully")
 	return nil
 }
@@ -136,6 +170,7 @@ func unsafeClearCache() {
 	cache.quoteSlice = nil
 	cache.teacherSlice = nil
 	cache.wordsMap = nil
+	cache.userSlice = nil
 }
 
 // Just adds quote to cache (quoteSlice and wordsMap) without checking q.QuoteID
@@ -167,6 +202,11 @@ func unsafeAddQuoteToCache(q QuoteT) error {
 // unsafe functions aren't concurrency safe
 func unsafeAddTeacherToCache(t TeacherT) {
 	cache.teacherSlice = append(cache.teacherSlice, t)
+}
+
+// unsafe functions aren't concurrency safe
+func unsafeAddUserToCache(u UserT) {
+	cache.userSlice = append(cache.userSlice, u)
 }
 
 func unsafeOverwriteTeacherInCache(t TeacherT) error {
@@ -395,7 +435,23 @@ func unsafeGetQuotesByStringFromCache(text string) []QuoteT {
 	return quoteSlice
 }
 
+func unsafeGetUserFromCache(name string, password string) UserT {
+	for _, user := range cache.userSlice {
+		 if strings.EqualFold(name, user.Name) && password == user.Password {
+			return user
+		 } 
+	}
+
+	// UserID beeing zero indicates no valid teacher has been found
+	return UserT{}
+}
+
 // PrintWordsMap is a debugging function
 func PrintWordsMap() {
 	log.Print(cache.wordsMap)
+}
+
+// PrintUserSlice is a debugging function
+func PrintUserSlice() {
+	log.Print(cache.userSlice)
 }

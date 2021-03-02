@@ -35,7 +35,7 @@ type teacherInputT struct {
 /*                           EXPORTED API FUNCTIONS                           */
 /* -------------------------------------------------------------------------- */
 
-func postAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
+func postAPIQuotesSubmit(w http.ResponseWriter, r *http.Request, u int32) {
 	var subm quoteInputT
 	var quote database.UnverifiedQuoteT
 
@@ -99,7 +99,7 @@ func postAPIQuotesSubmit(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func putAPIUnverifiedQuotesID(w http.ResponseWriter, r *http.Request) {
+func putAPIUnverifiedQuotesID(w http.ResponseWriter, r *http.Request, u int32) {
 	id, err := strconv.Atoi(mux.Vars(r)["id"])
 	if err != nil {
 		// This should not happend, because handlerAPIUnverifiedQuotes is only called if
@@ -177,7 +177,7 @@ func putAPIUnverifiedQuotesID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func deleteAPIUnverifiedQuotesID(w http.ResponseWriter, r *http.Request) {
+func deleteAPIUnverifiedQuotesID(w http.ResponseWriter, r *http.Request, u int32) {
 	id, err := strconv.Atoi(mux.Vars(r)["id"])
 	if err != nil {
 		// This should not happend, because handlerAPIUnverifiedQuotes is only called if
@@ -208,7 +208,7 @@ func deleteAPIUnverifiedQuotesID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func putAPIUnverifiedQuotesIDConfirm(w http.ResponseWriter, r *http.Request) {
+func putAPIUnverifiedQuotesIDConfirm(w http.ResponseWriter, r *http.Request, u int32) {
 	id, err := strconv.Atoi(mux.Vars(r)["id"])
 	if err != nil {
 		// This should not happend, because handlerAPIUnverifiedQuotes is only called if
@@ -270,7 +270,7 @@ func putAPIUnverifiedQuotesIDConfirm(w http.ResponseWriter, r *http.Request) {
 	database.DeleteUnverifiedQuote(int32(id))
 }
 
-func postAPITeachers(w http.ResponseWriter, r *http.Request) {
+func postAPITeachers(w http.ResponseWriter, r *http.Request, u int32) {
 	var subm teacherInputT
 	var teacher database.TeacherT
 
@@ -310,7 +310,7 @@ func postAPITeachers(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func putAPITeachersID(w http.ResponseWriter, r *http.Request) {
+func putAPITeachersID(w http.ResponseWriter, r *http.Request, u int32) {
 	id, err := strconv.Atoi(mux.Vars(r)["id"])
 	if err != nil {
 		// This should not happend, because handlerAPIUnverifiedQuotes is only called if
