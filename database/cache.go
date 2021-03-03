@@ -86,7 +86,7 @@ func unsafeLoadCache() error {
 	for rows.Next() {
 		// Get id and text of quote
 		var q QuoteT
-		rows.Scan(&q.QuoteID, &q.TeacherID, &q.Context, &q.Text, &q.Unixtime)
+		err = rows.Scan(&q.QuoteID, &q.TeacherID, &q.Context, &q.Text, &q.Unixtime)
 		if err != nil {
 			return errors.New("unsafeLoadCache: parsing quotes failed: " + err.Error())
 		}
@@ -118,7 +118,7 @@ func unsafeLoadCache() error {
 	for rows.Next() {
 		// Get teacher data (id, name, title, note)
 		var t TeacherT
-		rows.Scan(&t.TeacherID, &t.Name, &t.Title, &t.Note)
+		err = rows.Scan(&t.TeacherID, &t.Name, &t.Title, &t.Note)
 		if err != nil {
 			return errors.New("unsafeLoadCache: parsing teachers failed: " + err.Error())
 		}
@@ -147,7 +147,7 @@ func unsafeLoadCache() error {
 	for rows.Next() {
 		// Get user data (id, name, password admin)
 		var u UserT
-		rows.Scan(&u.UserID, &u.Name, &u.Password, &u.Admin)
+		err = rows.Scan(&u.UserID, &u.Name, &u.Password, &u.Admin)
 		if err != nil {
 			return errors.New("unsafeLoadCache: parsing users failed: " + err.Error())
 		}
@@ -178,7 +178,7 @@ func unsafeLoadCache() error {
 		// Get vote data (userid, quoteid)
 		var u, q int32
 
-		rows.Scan(&u, &q)
+		err = rows.Scan(&u, &q)
 		if err != nil {
 			return errors.New("unsafeLoadCache: parsing votes failed: " + err.Error())
 		}
