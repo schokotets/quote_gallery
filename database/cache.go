@@ -185,7 +185,10 @@ func unsafeLoadCache() error {
 
 		// add to local database
 		// unsafe, because cache is already locked for writing
-		unsafeAddVoteToCache(u, q)
+		err = unsafeAddVoteToCache(u, q)
+		if err != nil {
+			return errors.New("unsafeLoadCache: adding vote to cache failed: " + err.Error())
+		}
 	}
 
 	rows.Close()
@@ -238,30 +241,32 @@ func unsafeAddUserToCache(u UserT) {
 }
 
 // unsafe functions aren't concurrency safe
-func unsafeAddVoteToCache(u int32, q int32) {
+func unsafeAddVoteToCache(u int32, q int32) error {
 	if u < 1 {
 		// u must be greater than zero to be a valid UserID
-		return
+		return errors.New("unsafeAddVoteToCache: invalid UserID, must be greater than zero")
 	}
 
 	for len(cache.voteSlice) < int(u) {
 		cache.voteSlice = append(cache.voteSlice, []int32{})
 	}
 
-	for _,v := range cache.voteSlice[u-1] {
+	for _, v := range cache.voteSlice[u-1] {
 		if v == q {
-			return
+			// already voted - that's not a problem
+			return nil
 		}
 	}
 
 	cache.voteSlice[u-1] = append(cache.voteSlice[u-1], q)
 
-	for i,v := range cache.quoteSlice {
+	for i, v := range cache.quoteSlice {
 		if v.QuoteID == q {
 			cache.quoteSlice[i].Upvotes++
 			break
 		}
 	}
+	return nil
 }
 
 func unsafeOverwriteTeacherInCache(t TeacherT) error {
@@ -441,7 +446,7 @@ func unsafeGetNQuotesFromFromCache(n, from int) []QuoteT {
 	if from >= len(cache.quoteSlice) {
 		return nil
 	}
-	if from + n >= len(cache.quoteSlice) {
+	if from+n >= len(cache.quoteSlice) {
 		n = len(cache.quoteSlice) - from
 	}
 	quoteSlice := make([]QuoteT, n)
@@ -494,9 +499,9 @@ func unsafeGetQuotesByStringFromCache(text string) []QuoteT {
 
 func unsafeGetUserFromCache(name string, password string) UserT {
 	for _, user := range cache.userSlice {
-		 if strings.EqualFold(name, user.Name) && password == user.Password {
+		if strings.EqualFold(name, user.Name) && password == user.Password {
 			return user
-		 } 
+		}
 	}
 
 	// UserID = 0 indicates no matching user has been found
