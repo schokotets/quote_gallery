@@ -416,6 +416,8 @@ func unsafeGetTeacherByIDFromCache(ID int32) (TeacherT, bool) {
 			return teacher, true
 		}
 	}
+
+	// TeacherID = 0 indicates no matching teacher has been found
 	return TeacherT{}, false
 }
 
@@ -442,7 +444,7 @@ func unsafeGetUserFromCache(name string, password string) UserT {
 		 } 
 	}
 
-	// UserID beeing zero indicates no valid teacher has been found
+	// UserID = 0 indicates no matching user has been found
 	return UserT{}
 }
 

@@ -11,9 +11,9 @@ func adminAuth(handler func(w http.ResponseWriter, r *http.Request, u int32)) ht
 		user, password, ok := r.BasicAuth()
 		u := database.IsAdmin(user, password)
 		if !ok || u == 0 {
-			w.Header().Set("WWW-Authenticate", `Basic realm="You need admin priviliges"`)
+			w.Header().Set("WWW-Authenticate", `Basic realm="Log in (admin)"`)
 			w.WriteHeader(401)
-			w.Write([]byte("You are unauthorized.\n"))
+			w.Write([]byte("You not unauthorized as admin.\n"))
 			return
 	  	}
 	  	handler(w, r, u)
@@ -26,9 +26,9 @@ func userAuth(handler func(w http.ResponseWriter, r *http.Request, u int32)) htt
 		user, password, ok := r.BasicAuth()
 		u := database.IsUser(user, password)
 		if !ok || u == 0 {
-			w.Header().Set("WWW-Authenticate", `Basic realm="You need user priviliges"`)
+			w.Header().Set("WWW-Authenticate", `Basic realm="Log in (user)"`)
 			w.WriteHeader(401)
-			w.Write([]byte("You are unauthorized.\n"))
+			w.Write([]byte("You are not authorized as user.\n"))
 			return
 	  	}
 	  	handler(w, r, u)
