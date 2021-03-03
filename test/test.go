@@ -57,7 +57,7 @@ func main() {
 
 	database.DeleteTeacher(i[1].TeacherID)
 
-	j, _ := database.GetQuotes()
+	j, _ := database.GetAllQuotes()
 	fmt.Println(j)
 	database.PrintWordsMap()
 
@@ -66,7 +66,7 @@ func main() {
 
 	database.Initialize()
 
-	j, _ = database.GetQuotes()
+	j, _ = database.GetAllQuotes()
 	fmt.Println(j)
 	database.PrintWordsMap()
 
@@ -77,7 +77,7 @@ func main() {
 	// 	Text:      "BBB CCC DDD",
 	// })
 
-	// j = database.GetQuotes()
+	// j = database.GetAllQuotes()
 	// fmt.Println(j)
 
 	// j = database.GetQuotesByString("BBB DDD")
