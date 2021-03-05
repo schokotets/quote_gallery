@@ -9,14 +9,17 @@ import (
 func adminAuth(handler func(w http.ResponseWriter, r *http.Request, u int32)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user, password, ok := r.BasicAuth()
-		u := database.IsAdmin(user, password)
-		if !ok || u == 0 {
-			w.Header().Set("WWW-Authenticate", `Basic realm="Log in (admin)"`)
-			w.WriteHeader(401)
-			w.Write([]byte("You not unauthorized as admin.\n"))
-			return
-	  	}
-	  	handler(w, r, u)
+		if ok {
+			a := database.IsAdmin(user, password)
+			if a != 0 {
+				handler(w, r, a)
+				return
+			}
+		}
+		// no access granted
+		w.Header().Set("WWW-Authenticate", `Basic realm="Log in (admin)"`)
+		w.WriteHeader(401)
+		w.Write([]byte("You not unauthorized as admin.\n"))
 	}
 }
 
@@ -24,13 +27,16 @@ func adminAuth(handler func(w http.ResponseWriter, r *http.Request, u int32)) ht
 func userAuth(handler func(w http.ResponseWriter, r *http.Request, u int32)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user, password, ok := r.BasicAuth()
-		u := database.IsUser(user, password)
-		if !ok || u == 0 {
-			w.Header().Set("WWW-Authenticate", `Basic realm="Log in (user)"`)
-			w.WriteHeader(401)
-			w.Write([]byte("You are not authorized as user.\n"))
-			return
-	  	}
-	  	handler(w, r, u)
+		if ok {
+			u := database.IsUser(user, password)
+			if u != 0 {
+				handler(w, r, u)
+				return
+			}
+		}
+		// no access granted
+		w.Header().Set("WWW-Authenticate", `Basic realm="Log in (user)"`)
+		w.WriteHeader(401)
+		w.Write([]byte("You are not authorized as user.\n"))
 	}
 }
