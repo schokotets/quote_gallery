@@ -24,6 +24,9 @@
 	<h1>Lehrerzitate</h1>
 	<div class="buttonrow">
 		<a class="boxbutton" href="/submit">Zitat einsenden</a>
+		{{if .IsAdmin}}
+		<a class="boxbutton" href="/admin">Adminbereich</a>
+		{{end}}
 	</div>
 	{{template "NAVIGATION" .}}
 	<div class="quotelist">

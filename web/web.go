@@ -11,7 +11,7 @@ import (
 func SetupRoutes() {
 	rt := mux.NewRouter()
 
-	rt.HandleFunc("/", pageRoot)
+	rt.HandleFunc("/", anyAuth(pageRoot))
 
 	handlerFiles := http.FileServer(http.Dir("./public"))
 	rt.PathPrefix("/static/").Handler(http.StripPrefix("/static/", handlerFiles))
