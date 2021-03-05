@@ -32,6 +32,7 @@ func SetupRoutes() {
 	rt.HandleFunc("/api/unverifiedquotes/{id:[0-9]+}", adminAuth(putAPIUnverifiedQuotesID) ).Methods("PUT")
 	rt.HandleFunc("/api/unverifiedquotes/{id:[0-9]+}", adminAuth(deleteAPIUnverifiedQuotesID) ).Methods("DELETE")
 	rt.HandleFunc("/api/unverifiedquotes/{id:[0-9]+}/confirm", adminAuth(putAPIUnverifiedQuotesIDConfirm) ).Methods("PUT")
+	rt.HandleFunc("/api/unverifiedquotes/{quoteid:[0-9]+}/assignteacher/{teacherid:[0-9]+}", adminAuth(putAPIUnverifiedQuotesIDAssignTeacherID)).Methods("PUT")
 
 	// /api/teachers
 	rt.HandleFunc("/api/teachers", adminAuth(postAPITeachers) ).Methods("POST")
