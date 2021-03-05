@@ -16,7 +16,7 @@ import (
 
 const quotesPerPage = 15
 
-func pageRoot(w http.ResponseWriter, r *http.Request) {
+func pageRoot(w http.ResponseWriter, r *http.Request, isAdmin bool) {
 	if r.URL.Path != "/" {
 		w.WriteHeader(404)
 		fmt.Fprint(w, "404 Not Found")
@@ -63,7 +63,8 @@ func pageRoot(w http.ResponseWriter, r *http.Request) {
 		Current	int
 		Next	int
 		Last	int
-	}{quotes, previousPage, currentPage, nextPage, lastPage}
+		IsAdmin bool
+	}{quotes, previousPage, currentPage, nextPage, lastPage, isAdmin}
 
 	tmpl := template.Must(template.New("quotes.html").Funcs(template.FuncMap{
 		"inc": func (i int) int { return i+1 },
