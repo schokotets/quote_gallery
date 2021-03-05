@@ -8,6 +8,7 @@
 </head>
 <body style="max-width: unset">
 	<h1>Adminbereich</h1>
+	<a class="boxbutton" href="/">Zur Startseite</a>
 	<h2>Unbestätigte Zitate</h2>
 	<table>
 		<thead>
@@ -40,6 +41,13 @@
 					<a href="javascript:http('put','/api/unverifiedquotes/{{.QuoteID}}/confirm')">confirm</a>
 					{{else}}
 					<a href="/admin/teachers/add?name={{.TeacherName}}">create teacher</a>
+					<select id="teacherselect-{{.QuoteID}}" name="teacherselect-{{.QuoteID}}">
+						<option value="" selected disabled hidden></option>
+						{{range $.Teachers}}
+						<option value="{{.TeacherID}}">{{.Name}}, {{.Title}}{{if .Note}} ({{.Note}}){{end}}</option>
+						{{end}}
+					</select>
+					<a href="javascript:assignTeacher({{.QuoteID}})">assign teacher</a>
 					{{end}}
 
 				</td>

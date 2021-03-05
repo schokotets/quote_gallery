@@ -38,3 +38,18 @@ function axiosErrorString(response) {
 let teacherselect = document.getElementById("teacherselect");
 let customteacher = document.getElementsByClassName("customteacher")[0];
 let customteacherfield = document.getElementById("customteacherfield");
+
+function assignTeacher(quoteid) {
+  let teachersel = document.getElementById("teacherselect-"+quoteid);
+  if (!teachersel) {
+    alert("Lehrer-Auswahlliste nicht gefunden!");
+    return;
+  }
+  let teacherid = parseInt(teachersel.value);
+  if (!teacherid || isNaN(teacherid)) {
+    alert("Keinen Lehrer ausgewählt!");
+    return;
+  }
+  http("put","/api/unverifiedquotes/" + quoteid + "/assignteacher/" + teacherid);
+  return undefined;
+}
