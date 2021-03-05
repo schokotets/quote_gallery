@@ -270,6 +270,76 @@ func putAPIUnverifiedQuotesIDConfirm(w http.ResponseWriter, r *http.Request) {
 	database.DeleteUnverifiedQuote(int32(id))
 }
 
+func putAPIUnverifiedQuotesIDAssignTeacherID(w http.ResponseWriter, r *http.Request) {
+	quoteid, err := strconv.Atoi(mux.Vars(r)["quoteid"])
+	if err != nil {
+		// This should not happen because this handler is only called if
+		// uri pattern is matched, see web.go
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "cannot convert in-url id to int")
+		return
+	}
+
+	if quoteid == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "invalid QuoteID: 0")
+		return
+	}
+
+	teacherid, err := strconv.Atoi(mux.Vars(r)["teacherid"])
+	if err != nil {
+		// This should not happen, see above
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "cannot convert in-url id to int")
+		return
+	}
+
+	if teacherid == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "invalid TeacherID: 0")
+		return
+	}
+
+	q, err := database.GetUnverifiedQuoteByID(int32(quoteid))
+
+	if err != nil {
+		switch err.(type) {
+		case database.InvalidQuoteIDError:
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprintf(w, "unknown QuoteID: %d", quoteid)
+			return
+		default:
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "internal server error")
+			log.Printf("/api/unverifiedquotes/:quoteid/assignteacher/:teacherid: getting quote failed with error '%s'", err.Error())
+			return
+		}
+	}
+
+	q.TeacherID = int32(teacherid)
+	q.TeacherName = ""
+
+	err = database.UpdateUnverifiedQuote(q)
+
+	if err != nil {
+		switch err.(type) {
+		case database.InvalidTeacherIDError:
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprintf(w, "unknown TeacherID: %d", teacherid)
+			return
+		case database.InvalidQuoteIDError:
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprintf(w, "unknown QuoteID: %d", quoteid)
+			return
+		default:
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "internal server error")
+			log.Printf("/api/unverifiedquotes/:quoteid/assignteacher/:teacherid: assigning teacher failed with error '%s'", err.Error())
+			return
+		}
+	}
+}
+
 func postAPITeachers(w http.ResponseWriter, r *http.Request) {
 	var subm teacherInputT
 	var teacher database.TeacherT

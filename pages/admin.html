@@ -40,6 +40,13 @@
 					<a href="javascript:http('put','/api/unverifiedquotes/{{.QuoteID}}/confirm')">confirm</a>
 					{{else}}
 					<a href="/admin/teachers/add?name={{.TeacherName}}">create teacher</a>
+					<select id="teacherselect-{{.QuoteID}}" name="teacherselect-{{.QuoteID}}">
+						<option value="" selected disabled hidden></option>
+						{{range $.Teachers}}
+						<option value="{{.TeacherID}}">{{.Name}}, {{.Title}}{{if .Note}} ({{.Note}}){{end}}</option>
+						{{end}}
+					</select>
+					<a href="javascript:assignTeacher({{.QuoteID}})">assign teacher</a>
 					{{end}}
 
 				</td>
