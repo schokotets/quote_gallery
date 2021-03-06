@@ -440,6 +440,36 @@ func unsafeDeleteQuoteFromCache(ID int32) error {
 	return nil
 }
 
+func unsafeDeleteVoteFromCache(u int32, q int32) error {
+	if u < 1 || len(cache.voteSlice) < int(u) {
+		// u must be greater than zero to be a valid UserID
+		// u is used as index in cache.voteSlice, hence cannot be greater than the length of the slice
+		return errors.New("unsafeDeleteVoteFromCache: invalid UserID")
+	}
+	
+	a := cache.voteSlice[u-1]
+	for i, v := range a {
+		if v == q {
+			a[i] = a[len(a)-1]
+			a[len(a)-1] = 0
+			cache.voteSlice[u-1] = a[:len(a)-1]
+
+			for i, v := range cache.quoteSlice {
+				if v.QuoteID == q {
+					if cache.quoteSlice[i].Upvotes > 0 {
+						cache.quoteSlice[i].Upvotes--
+					}
+					break
+				}
+			}
+			
+			break
+		}
+	}
+
+	return nil
+}
+
 // Returns maximum amount of n quotes from cache starting from index from.
 // Returns nil if starting index is too big.
 func unsafeGetNQuotesFromFromCache(n, from int) []QuoteT {

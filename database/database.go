@@ -954,6 +954,43 @@ func AddVote(u int32, q int32) error {
 	return nil
 }
 
+// DeleteVote deletes a vote from one user for one quote from the database
+func DeleteVote(u int32, q int32) error {
+	if u < 1 {
+		// u must be greater than zero to be a valid UserID
+		return errors.New("DeleteVote: invalid UserID, must be greater than zero")
+	}
+	
+	// Verify connection to database
+	err := database.Ping()
+	if err != nil {
+		database.Close()
+		return DBError{ "DeleteVote: pinging database failed", err }
+	}
+
+	// add vote to database
+	var res sql.Result
+	res, err = database.Exec(
+		`DELETE FROM votes WHERE Hash = $1`, voteHash(u, q))
+	if err != nil {
+		return DBError{ "DeleteVote: deleting vote from database failed", err }
+	}
+
+	if rowsAffected, _ := res.RowsAffected(); rowsAffected == 0 {
+		// not voted - that's not a problem
+		return nil
+	}
+
+	globalMutex.MajorLock()
+	defer globalMutex.MajorUnlock()
+
+	// add vote to cache
+	unsafeDeleteVoteFromCache(u, q)
+	
+	return nil
+}
+
+
 /* -------------------------------------------------------------------------- */
 /*                         UNEXPORTED HELPER FUNCTIONS                        */
 /* -------------------------------------------------------------------------- */
