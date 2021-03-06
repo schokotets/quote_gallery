@@ -42,18 +42,18 @@ func userAuth(handler func(w http.ResponseWriter, r *http.Request, u int32)) htt
 }
 
 // anyAuth handles user/admin authorization, passes along isAdmin bool
-func anyAuth(handler func(w http.ResponseWriter, r *http.Request, isAdmin bool)) http.HandlerFunc {
+func anyAuth(handler func(w http.ResponseWriter, r *http.Request, u int32, isAdmin bool)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user, password, ok := r.BasicAuth()
 		if ok {
 			a := database.IsAdmin(user, password)
 			if a != 0 {
-				handler(w, r, true)
+				handler(w, r, a, true)
 				return
 			}
 			u := database.IsUser(user, password)
 			if u != 0 {
-				handler(w, r, false)
+				handler(w, r, u, false)
 				return
 			}
 		}
