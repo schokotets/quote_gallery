@@ -910,3 +910,38 @@ func IsAdmin(name string, password string) int32 {
 	}
 	return 0
 }
+
+
+/* -------------------------------------------------------------------------- */
+/*                          EXPORTED VOTING FUNCTIONS                         */
+/* -------------------------------------------------------------------------- */
+
+// AddVote adds a vote from one user for one quote to the database
+func AddVote(u int32, q int32) error {
+	if u < 1 {
+		// u must be greater than zero to be a valid UserID
+		return errors.New("AddVote: invalid UserID, must be greater than zero")
+	}
+	
+	// Verify connection to database
+	err := database.Ping()
+	if err != nil {
+		database.Close()
+		return DBError{ "AddVote: pinging database failed", err }
+	}
+
+	// add vote to database
+	_, err = database.Exec(
+		`INSERT INTO votes (UserID, QuoteID) VALUES ($1, $2)`, u, q)
+	if err != nil {
+		return DBError{ "AddVote: inserting vote into database failed", err }
+	}
+
+	globalMutex.MajorLock()
+	defer globalMutex.MajorUnlock()
+
+	// add vote to cache
+	unsafeAddVoteToCache(u, q)
+	
+	return nil
+}
