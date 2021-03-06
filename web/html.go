@@ -16,7 +16,7 @@ import (
 
 const quotesPerPage = 15
 
-func pageRoot(w http.ResponseWriter, r *http.Request, isAdmin bool) {
+func pageRoot(w http.ResponseWriter, r *http.Request, userID int32, isAdmin bool) {
 	if r.URL.Path != "/" {
 		w.WriteHeader(404)
 		fmt.Fprint(w, "404 Not Found")
