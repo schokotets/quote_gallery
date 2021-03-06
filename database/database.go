@@ -206,6 +206,7 @@ func Initialize() error {
 	// Create votes table in database if it doesn't exist
 	_, err = database.Exec(
 		`CREATE TABLE IF NOT EXISTS votes (
+		Hash bigint PRIMARY KEY,
 		UserID integer REFERENCES users (UserID) ON DELETE CASCADE,
 		QuoteID integer REFERENCES quotes (QuoteID) ON DELETE CASCADE)`)
 	if err != nil {
@@ -931,10 +932,17 @@ func AddVote(u int32, q int32) error {
 	}
 
 	// add vote to database
-	_, err = database.Exec(
-		`INSERT INTO votes (UserID, QuoteID) VALUES ($1, $2)`, u, q)
+	var res sql.Result
+	res, err = database.Exec(
+		`INSERT INTO votes (Hash, UserID, QuoteID) VALUES ($1, $2, $3) 
+		 ON CONFLICT (Hash) DO NOTHING `, voteHash(u, q), u, q)
 	if err != nil {
 		return DBError{ "AddVote: inserting vote into database failed", err }
+	}
+
+	if rowsAffected, _ := res.RowsAffected(); rowsAffected == 0 {
+		// already voted - that's not a problem
+		return nil
 	}
 
 	globalMutex.MajorLock()
@@ -944,4 +952,12 @@ func AddVote(u int32, q int32) error {
 	unsafeAddVoteToCache(u, q)
 	
 	return nil
+}
+
+/* -------------------------------------------------------------------------- */
+/*                         UNEXPORTED HELPER FUNCTIONS                        */
+/* -------------------------------------------------------------------------- */
+
+func voteHash(u int32, q int32) int64 {
+	return int64(u)<<32 | int64(q)
 }
