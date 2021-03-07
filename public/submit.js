@@ -75,6 +75,7 @@ function axiosErrorString(response) {
 let teacherselect = document.getElementById("teacherselect");
 let customteacher = document.getElementsByClassName("customteacher")[0];
 let customteacherfield = document.getElementById("customteacherfield");
+let customteachercheckbox = document.getElementById("certainthatcustom");
 
 teacherselect.addEventListener("change", checkTeacherSelect);
 checkTeacherSelect({target: teacherselect})
@@ -83,8 +84,10 @@ function checkTeacherSelect(e) {
   if(e.target.selectedIndex == 1) { //custom field
     customteacher.style.display = "unset"
     customteacherfield.setAttribute("required", true)
+    customteachercheckbox.setAttribute("required", true)
   } else {
     customteacher.style.display = "none"
     customteacherfield.removeAttribute("required")
+    customteachercheckbox.removeAttribute("required")
   }
 }

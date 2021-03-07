@@ -61,6 +61,16 @@ table.table a:link, table.table a:visited {
   color: blue;
 }
 
+.boxbutton-slim {
+  padding: 0.3em 0.5em;
+  text-decoration: none;
+  color: black;
+}
+
+.boxbutton-slim:not([disabled]) {
+  outline: solid 1px black;
+}
+
 .boxbutton {
   padding: 0.5em;
   border: solid 1px black;

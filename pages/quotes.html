@@ -1,14 +1,14 @@
 {{define "NAVIGATION"}}
 <div class="navigation">
-	<a class="first" {{if eq -1 .Prev}}disabled{{else}}href="?page=0"{{end}}>&lt;&lt;</a>
+	<a class="first boxbutton-slim" {{if eq -1 .Prev}}disabled{{else}}href="?page=0"{{end}}>&lt;&lt;</a>
 	&nbsp;
-	<a class="previous" {{if eq -1 .Prev}}disabled{{else}}href="?page={{.Prev}}"{{end}}>&lt;</a>
+	<a class="previous boxbutton-slim" {{if eq -1 .Prev}}disabled{{else}}href="?page={{.Prev}}"{{end}}>&lt;</a>
 	&nbsp;
 	<span class="pageIndex">Seite {{inc .Current}} von {{inc .Last}}</span>
 	&nbsp;
-	<a class="next" {{if eq -1 .Next}}disabled{{else}}href="?page={{.Next}}"{{end}}>&gt;</a>
+	<a class="next boxbutton-slim" {{if eq -1 .Next}}disabled{{else}}href="?page={{.Next}}"{{end}}>&gt;</a>
 	&nbsp;
-	<a class="last" {{if eq .Current .Last}}disabled{{else}}href="?page={{.Last}}"{{end}}>&gt;&gt;</a>
+	<a class="last boxbutton-slim" {{if eq .Current .Last}}disabled{{else}}href="?page={{.Last}}"{{end}}>&gt;&gt;</a>
 </div>
 {{end}}
 
