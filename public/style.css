@@ -27,28 +27,37 @@ input, select {
   margin: 2em 0;
 }
 
+.quote span {
+  display: block;
+}
+
 .quote .text {
   font-size: 1.3em;
   line-height: 1.4;
-  margin-top: 0.1em;
   margin-bottom: 0.2em;
 }
 
-table {
+.quote .likebutton {
+  height: 1em;
+  width: 1em;
+  padding-top: 0.39em;
+}
+
+table.table {
   border-collapse: collapse;
   margin-top: 1em;
 }
 
-table td, table th {
+table.table td, table.table th {
   border: 1px solid;
   padding: 0.6em 0.4em;
 }
 
-table tr:nth-child(2n), table th {
+table.table tr:nth-child(2n), table.table th {
   background-color: #ddd;
 }
 
-table a:link, table a:visited {
+table.table a:link, table.table a:visited {
   color: blue;
 }
 

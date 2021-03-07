@@ -32,10 +32,23 @@
 	<div class="quotelist">
 		{{range .Quotes}}
 		<div class="quote">
-			<i><span class="id">Zitat #{{.QuoteID}}</span></i><br>
-			{{if .Context}}Situation: {{.Context}}<br>{{end}}
-			<span class="text" style="display:block">„{{.Text}}“</span>
-			<span class="teacher">~ {{with (GetTeacherByID .TeacherID)}}{{.Title}} {{.Name}}{{if .Note}} ({{.Note}}){{end}}{{end}}</span>
+			<!--<span class="id"><i>Zitat #{{.QuoteID}}</i></span>-->
+			{{if .Context}}<span>Situation: {{.Context}}</span>{{end}}
+			<table>
+				<tr>
+					<td style="vertical-align: top;">
+						{{if .Voted}}
+						<img src="/static/heart-red.svg" class="likebutton">
+						{{else}}
+						<img src="/static/heart-gray.svg" class="likebutton">
+						{{end}}
+					</td>
+					<td>
+						<span class="text">„{{.Text}}“</span>
+						<span class="teacher">~ {{with (GetTeacherByID .TeacherID)}}{{.Title}} {{.Name}}{{if .Note}} ({{.Note}}){{end}}{{end}}</span>
+					</td>
+				</tr>
+			</table>
 		</div>
 		{{end}}
 	</div>
