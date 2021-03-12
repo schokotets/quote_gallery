@@ -30,7 +30,7 @@
 					{{if .TeacherName}}{{.TeacherName}}{{end}}</td>
 				<td>{{.Context}}</td>
 				<td>{{.Text}}</td>
-				<td>{{.Unixtime}}</td>
+				<td>{{FormatUnixtime .Unixtime}}</td>
 				<td>{{.IPHash}}</td>
 				<td>
 					<a href="javascript:http('delete','/api/unverifiedquotes/{{.QuoteID}}')">delete</a>

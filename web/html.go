@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -101,6 +102,9 @@ func pageAdmin(w http.ResponseWriter, r *http.Request, u int32) {
 
 	tmpl := template.Must(template.New("admin.html").Funcs(template.FuncMap{
 		"GetTeacherByID": database.GetTeacherByID,
+		"FormatUnixtime": func(utime int64) string {
+			return time.Unix(utime, 0).Format("2.1.2006 15:04")
+		},
 	}).ParseFiles("pages/admin.html"))
 
 	err = tmpl.Execute(w, pagedata)
