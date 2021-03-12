@@ -26,8 +26,24 @@
 			{{range .Quotes}}
 			<tr>
 				<td>#{{.QuoteID}}</td>
-				<td>{{if .TeacherID}}{{with (GetTeacherByID .TeacherID)}}#{{.TeacherID}}: {{.Title}} {{.Name}}{{if .Note}} ({{.Note}}){{end}}{{end}}{{end}}
-					{{if .TeacherName}}{{.TeacherName}}{{end}}</td>
+				<td>
+					{{if .TeacherID}}
+					{{with (GetTeacherByID .TeacherID)}}#{{.TeacherID}}: {{.Title}} {{.Name}}{{if .Note}} ({{.Note}}){{end}}{{end}}
+					{{else}}
+					{{if .TeacherName}}{{.TeacherName}}{{end}}
+					<a href="/admin/teachers/add?name={{.TeacherName}}">create new teacher</a>
+
+					<div class="force1row">
+						<select id="teacherselect-{{.QuoteID}}" name="teacherselect-{{.QuoteID}}">
+							<option value="" selected disabled hidden>assign existing teacher</option>
+							{{range $.Teachers}}
+							<option value="{{.TeacherID}}">{{.Name}}, {{.Title}}{{if .Note}} ({{.Note}}){{end}}</option>
+							{{end}}
+						</select>
+						<a href="javascript:assignTeacher({{.QuoteID}})">ok</a>
+					</div>
+					{{end}}
+				</td>
 				<td>{{.Context}}</td>
 				<td>{{.Text}}</td>
 				<td>{{FormatUnixtime .Unixtime}}</td>
@@ -39,17 +55,7 @@
 					&nbsp;
 					{{if .TeacherID}}
 					<a href="javascript:http('put','/api/unverifiedquotes/{{.QuoteID}}/confirm')">confirm</a>
-					{{else}}
-					<a href="/admin/teachers/add?name={{.TeacherName}}">create teacher</a>
-					<select id="teacherselect-{{.QuoteID}}" name="teacherselect-{{.QuoteID}}">
-						<option value="" selected disabled hidden></option>
-						{{range $.Teachers}}
-						<option value="{{.TeacherID}}">{{.Name}}, {{.Title}}{{if .Note}} ({{.Note}}){{end}}</option>
-						{{end}}
-					</select>
-					<a href="javascript:assignTeacher({{.QuoteID}})">assign teacher</a>
 					{{end}}
-
 				</td>
 			</tr>
 			{{end}}

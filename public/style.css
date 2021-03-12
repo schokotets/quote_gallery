@@ -15,6 +15,14 @@ input, select {
   box-sizing:border-box;
 }
 
+.force1row {
+  white-space: nowrap;
+}
+
+.force1row > * {
+  display: inline-block;
+}
+
 .fullwidth {
   width: 100%;
 }
