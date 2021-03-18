@@ -10,7 +10,7 @@
 	<h1>Adminbereich</h1>
 	<a class="boxbutton" href="/">Zur Startseite</a>
 	<h2>Unbestätigte Zitate</h2>
-	<table class="table">
+	<table class="table fullwidth">
 		<thead>
 			<tr>
 				<th>ID</th>
@@ -18,20 +18,34 @@
 				<th>Context</th>
 				<th>Text</th>
 				<th>Unixtime</th>
-				<th>IPHash</th>
-				<th>OPERATIONS</th>
+				<th>Actions</th>
 			</tr>
 		</thead>
 		<tbody>
 			{{range .Quotes}}
 			<tr>
 				<td>#{{.QuoteID}}</td>
-				<td>{{if .TeacherID}}{{with (GetTeacherByID .TeacherID)}}#{{.TeacherID}}: {{.Title}} {{.Name}}{{if .Note}} ({{.Note}}){{end}}{{end}}{{end}}
-					{{if .TeacherName}}{{.TeacherName}}{{end}}</td>
+				<td>
+					{{if .TeacherID}}
+					{{with (GetTeacherByID .TeacherID)}}#{{.TeacherID}}: {{.Title}} {{.Name}}{{if .Note}} ({{.Note}}){{end}}{{end}}
+					{{else}}
+					{{if .TeacherName}}{{.TeacherName}}{{end}}
+					<a href="/admin/teachers/add?name={{.TeacherName}}">create new teacher</a>
+
+					<div class="force1row">
+						<select id="teacherselect-{{.QuoteID}}" name="teacherselect-{{.QuoteID}}">
+							<option value="" selected disabled hidden>assign existing teacher</option>
+							{{range $.Teachers}}
+							<option value="{{.TeacherID}}">{{.Name}}, {{.Title}}{{if .Note}} ({{.Note}}){{end}}</option>
+							{{end}}
+						</select>
+						<a href="javascript:assignTeacher({{.QuoteID}})">ok</a>
+					</div>
+					{{end}}
+				</td>
 				<td>{{.Context}}</td>
 				<td>{{.Text}}</td>
-				<td>{{.Unixtime}}</td>
-				<td>{{.IPHash}}</td>
+				<td>{{FormatUnixtime .Unixtime}}</td>
 				<td>
 					<a href="javascript:http('delete','/api/unverifiedquotes/{{.QuoteID}}')">delete</a>
 					&nbsp;
@@ -39,17 +53,7 @@
 					&nbsp;
 					{{if .TeacherID}}
 					<a href="javascript:http('put','/api/unverifiedquotes/{{.QuoteID}}/confirm')">confirm</a>
-					{{else}}
-					<a href="/admin/teachers/add?name={{.TeacherName}}">create teacher</a>
-					<select id="teacherselect-{{.QuoteID}}" name="teacherselect-{{.QuoteID}}">
-						<option value="" selected disabled hidden></option>
-						{{range $.Teachers}}
-						<option value="{{.TeacherID}}">{{.Name}}, {{.Title}}{{if .Note}} ({{.Note}}){{end}}</option>
-						{{end}}
-					</select>
-					<a href="javascript:assignTeacher({{.QuoteID}})">assign teacher</a>
 					{{end}}
-
 				</td>
 			</tr>
 			{{end}}
@@ -66,7 +70,7 @@
 				<th>Title</th>
 				<th>Name</th>
 				<th>Note</th>
-				<th>OPERATIONS</th>
+				<th>Actions</th>
 			</tr>
 		</thead>
 		<tbody>
