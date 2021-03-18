@@ -1,5 +1,14 @@
 package database
 
+// InvalidUserIDError is used when the UserID is invalid
+type InvalidUserIDError struct {
+	Message string
+}
+
+func (err InvalidUserIDError) Error() string {
+	return err.Message
+}
+
 // InvalidTeacherIDError is used when the TeacherID is invalid
 type InvalidTeacherIDError struct {
 	Message string

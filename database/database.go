@@ -912,6 +912,41 @@ func IsAdmin(name string, password string) int32 {
 	return 0
 }
 
+// GetUsernameByID fetches a user's username using their UserID from the database
+//
+// Possible returned error types: generic / DBError / InvalidUserIDError
+func GetUsernameByID(userid int32) (string, error) {
+	if database == nil {
+		return "", errors.New("GetUsernameByID: not connected to database")
+	}
+
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
+
+	// get matching user from database
+	rows, err := database.Query(`SELECT Name FROM users WHERE UserID=$1`, userid)
+	if err != nil {
+		return "", DBError{ "GetUsernameByID: loading users from database failed", err }
+	}
+
+	var username string
+
+	// Iterate over the one matching user
+	if rows.Next() {
+		// Get user data
+
+		err := rows.Scan(&username)
+		if err != nil {
+			return "", DBError{ "GetUsernameByID: parsing user data failed", err }
+		}
+	} else {
+		// User not found
+		return "", InvalidUserIDError{ "GetUsernameByID: no matching user found" }
+	}
+
+	return username, nil
+}
+
 
 /* -------------------------------------------------------------------------- */
 /*                          EXPORTED VOTING FUNCTIONS                         */

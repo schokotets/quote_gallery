@@ -102,6 +102,7 @@ func pageAdmin(w http.ResponseWriter, r *http.Request, u int32) {
 
 	tmpl := template.Must(template.New("admin.html").Funcs(template.FuncMap{
 		"GetTeacherByID": database.GetTeacherByID,
+		"GetUsernameByID": database.GetUsernameByID,
 		"FormatUnixtime": func(utime int64) string {
 			return time.Unix(utime, 0).Format("2.1.2006 15:04")
 		},

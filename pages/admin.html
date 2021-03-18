@@ -18,6 +18,7 @@
 				<th>Context</th>
 				<th>Text</th>
 				<th>Unixtime</th>
+				<th>User</th>
 				<th>Actions</th>
 			</tr>
 		</thead>
@@ -46,6 +47,7 @@
 				<td>{{.Context}}</td>
 				<td>{{.Text}}</td>
 				<td>{{FormatUnixtime .Unixtime}}</td>
+				<td>{{GetUsernameByID .UserID}}</td>
 				<td>
 					<a href="javascript:http('delete','/api/unverifiedquotes/{{.QuoteID}}')">delete</a>
 					&nbsp;
