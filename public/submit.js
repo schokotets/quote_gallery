@@ -33,6 +33,7 @@ function processForm(e) {
   request.then(function (res) {
       if(res.status == 200) {
         form.reset();
+        checkTeacherSelect();
         if(EDITING) {
           //hiding form because chrome re-shows last input values
           document.getElementById("form-submit").style.display = "none"
@@ -78,10 +79,11 @@ let customteacherfield = document.getElementById("customteacherfield");
 let customteachercheckbox = document.getElementById("certainthatcustom");
 
 teacherselect.addEventListener("change", checkTeacherSelect);
-checkTeacherSelect({target: teacherselect})
+checkTeacherSelect()
 
 function checkTeacherSelect(e) {
-  if(e.target.selectedIndex == 1) { //custom field
+  let target = e && e.target ? e.target : teacherselect;
+  if(target.selectedIndex == 1) { //custom field
     customteacher.style.display = "unset"
     customteacherfield.setAttribute("required", true)
     customteachercheckbox.setAttribute("required", true)

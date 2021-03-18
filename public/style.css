@@ -15,6 +15,10 @@ input, select {
   box-sizing:border-box;
 }
 
+p, label {
+  line-height: 1.2;
+}
+
 .force1row {
   white-space: nowrap;
 }
