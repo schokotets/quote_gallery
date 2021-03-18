@@ -3,13 +3,11 @@ package web
 import (
 	"encoding/json"
 	"fmt"
-	"hash/fnv"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"quote_gallery/database"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -81,7 +79,6 @@ func postAPIQuotesSubmit(w http.ResponseWriter, r *http.Request, u int32) {
 
 	// Add further information to UnverifiedQuote
 	quote.Unixtime = int64(time.Now().Unix())
-	quote.IPHash = hash(strings.Split(r.RemoteAddr, ":")[0])
 
 	// Store UnverifiedQuote in database
 	err = database.CreateUnverifiedQuote(quote)
@@ -434,14 +431,4 @@ func putAPITeachersID(w http.ResponseWriter, r *http.Request, u int32) {
 		log.Printf("/api/teachers: updating teacher failed with error '%s' for request body '%s' and TeacherT %v", err.Error(), bytes, teacher)
 		return
 	}
-}
-
-/* -------------------------------------------------------------------------- */
-/*                         UNEXPORTED HELPER FUNCTIONS                        */
-/* -------------------------------------------------------------------------- */
-
-func hash(s string) int64 {
-	x := fnv.New64a()
-	x.Write([]byte(s))
-	return int64(x.Sum64())
 }
