@@ -77,6 +77,8 @@ func postAPIQuotesSubmit(w http.ResponseWriter, r *http.Request, u int32) {
 	quote.Context = subm.Context
 	quote.Text = subm.Text
 
+	quote.UserID = u
+
 	// Add further information to UnverifiedQuote
 	quote.Unixtime = int64(time.Now().Unix())
 

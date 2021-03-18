@@ -37,6 +37,7 @@ type QuoteT struct {
 }
 
 // UnverifiedQuoteT stores one unverified quote
+// UserID       the unique ID of the submitting user
 // QuoteID      the unique ID of the unverified quote
 // TeacherID    the unique ID of the corresponding teacher
 // TeacherName  the name of the teacher if no TeacherID is given (e.g. new teacher)
@@ -44,6 +45,7 @@ type QuoteT struct {
 // Text         the text of the quote itself
 // Unixtime     the time of submission; optional
 type UnverifiedQuoteT struct {
+	UserID      int32
 	QuoteID     int32
 	TeacherID   int32
 	TeacherName string
@@ -176,6 +178,7 @@ func Initialize() error {
 	// for more information see UnverifiedQuoteT declaration
 	_, err = database.Exec(
 		`CREATE TABLE IF NOT EXISTS unverifiedQuotes (
+		UserID integer REFERENCES users (UserID) ON DELETE CASCADE,
 		QuoteID serial PRIMARY KEY,
 		TeacherID integer REFERENCES teachers (TeacherID) ON DELETE CASCADE, 
 		TeacherName varchar, 
@@ -664,6 +667,7 @@ func GetUnverifiedQuotes() ([]UnverifiedQuoteT, error) {
 
 	// get all unverifiedQuotes from database
 	rows, err := database.Query(`SELECT
+		UserID,
 		QuoteID,
 		TeacherID, 
 		TeacherName, 
@@ -683,7 +687,7 @@ func GetUnverifiedQuotes() ([]UnverifiedQuoteT, error) {
 		var q UnverifiedQuoteT
 		var TeacherID sql.NullInt32
 
-		err := rows.Scan(&q.QuoteID, &TeacherID, &q.TeacherName, &q.Context, &q.Text, &q.Unixtime)
+		err := rows.Scan(&q.UserID, &q.QuoteID, &TeacherID, &q.TeacherName, &q.Context, &q.Text, &q.Unixtime)
 		if err != nil {
 			return nil, DBError{ "GetUnverifiedQuotes: parsing unverifiedQuotes failed", err }
 		}
@@ -720,6 +724,7 @@ func GetUnverifiedQuoteByID(ID int32) (UnverifiedQuoteT, error) {
 
 	// Query database
 	rows, err := database.Query(`SELECT
+		UserID,
 		TeacherID, 
 		TeacherName, 
 		Context,
@@ -737,7 +742,7 @@ func GetUnverifiedQuoteByID(ID int32) (UnverifiedQuoteT, error) {
 	var q UnverifiedQuoteT
 	var TeacherID sql.NullInt32
 
-	err = rows.Scan(&TeacherID, &q.TeacherName, &q.Context, &q.Text, &q.Unixtime)
+	err = rows.Scan(&q.UserID, &TeacherID, &q.TeacherName, &q.Context, &q.Text, &q.Unixtime)
 	if err != nil {
 		return UnverifiedQuoteT{}, DBError{ "GetUnverifiedQuoteByID: parsing unverifiedQuotes failed", err }
 	}
@@ -772,11 +777,11 @@ func CreateUnverifiedQuote(q UnverifiedQuoteT) error {
 		return DBError{ "CreateUnverifiedQuote: pinging database failed", err }
 	}
 
-	// add quote to database
+	// add quote to database - by ID or by name
 	if q.TeacherID != 0 {
 		_, err = database.Exec(
-			`INSERT INTO unverifiedQuotes (TeacherID, TeacherName, Context, Text, Unixtime) VALUES ($1, $2, $3, $4, $5)`,
-			q.TeacherID, q.TeacherName, q.Context, q.Text, q.Unixtime)
+			`INSERT INTO unverifiedQuotes (UserID, TeacherID, TeacherName, Context, Text, Unixtime) VALUES ($1, $2, $3, $4, $5, $6)`,
+			q.UserID, q.TeacherID, q.TeacherName, q.Context, q.Text, q.Unixtime)
 		if err != nil {
 			if strings.Contains(err.Error(), "violates foreign key constraint") {
 				return InvalidTeacherIDError{ "CreateUnverifiedQuote: no teacher with given TeacherID" }
@@ -785,8 +790,8 @@ func CreateUnverifiedQuote(q UnverifiedQuoteT) error {
 		}
 	} else {
 		_, err = database.Exec(
-			`INSERT INTO unverifiedQuotes (TeacherID, TeacherName, Context, Text, Unixtime) VALUES ($1, $2, $3, $4, $5)`,
-			nil, q.TeacherName, q.Context, q.Text, q.Unixtime)
+			`INSERT INTO unverifiedQuotes (UserID, TeacherID, TeacherName, Context, Text, Unixtime) VALUES ($1, $2, $3, $4, $5, $6)`,
+			q.UserID, nil, q.TeacherName, q.Context, q.Text, q.Unixtime)
 		if err != nil {
 			return DBError{ "CreateUnverifiedQuote: inserting quote into database failed", err }
 		}
@@ -796,7 +801,7 @@ func CreateUnverifiedQuote(q UnverifiedQuoteT) error {
 }
 
 // UpdateUnverifiedQuote updates an unverified quote.
-// Unixtime field will be ignored.
+// UserID and Unixtime field will be ignored.
 //
 // Possible returned error types: generic / DBError / InvalidTeacherIDError / InvalidQuoteIDError
 func UpdateUnverifiedQuote(q UnverifiedQuoteT) error {
