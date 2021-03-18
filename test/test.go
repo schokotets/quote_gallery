@@ -89,7 +89,6 @@ func main() {
 	// 	TeacherName: "Test",
 	// 	Context:     "sadklfjh",
 	// 	Text:        "sadlkfusdl",
-	// 	IPHash:      3487562938475,
 	// 	Unixtime:    23489576485,
 	// }))
 
