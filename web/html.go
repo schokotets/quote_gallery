@@ -92,12 +92,16 @@ func pageAdmin(w http.ResponseWriter, r *http.Request, u int32) {
 	sort.Slice(quotes, func(i, j int) bool { return quotes[i].Unixtime < quotes[j].Unixtime })
 	sort.Slice(teachers, func(i, j int) bool { return teachers[i].TeacherID < teachers[j].TeacherID })
 
+	_, showusers := r.URL.Query()["showusers"]
+
 	pagedata := struct {
 		Quotes []database.UnverifiedQuoteT
 		Teachers []database.TeacherT
+		ShowUsers bool
 	} {
 		quotes,
 		teachers,
+		showusers,
 	}
 
 	tmpl := template.Must(template.New("admin.html").Funcs(template.FuncMap{
