@@ -18,6 +18,7 @@ func SetupRoutes() {
 
 	// pages
 	rt.HandleFunc("/submit", userAuth(pageSubmit) )
+	rt.HandleFunc("/suggestions", userAuth(pageSimilarQuotes) )
 
 	// admin pages
 	rt.HandleFunc("/admin", adminAuth(pageAdmin) )

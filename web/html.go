@@ -3,6 +3,7 @@ package web
 import (
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 	"quote_gallery/database"
 	"sort"
@@ -206,4 +207,33 @@ func pageSubmit(w http.ResponseWriter, r *http.Request, u int32) {
 	sort.Slice(teachers, func(i, j int) bool { return teachers[i].Name < teachers[j].Name })
 	tmpl := template.Must(template.ParseFiles("pages/submit.html"))
 	tmpl.Execute(w, teachers)
+}
+
+func pageSimilarQuotes(w http.ResponseWriter, r *http.Request, u int32) {
+	if queryParam, ok := r.URL.Query()["text"]; ok {
+		text := queryParam[0]
+		if text == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, "no text given")
+			return
+		}
+
+		similarquotes, err := database.GetMaxNQuotesByString(3, text)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "failed to retrieve matching quotes")
+			log.Printf("/suggestions: retrieving matching quotes failed with error '%s'", err.Error())
+			return
+		}
+
+		if len(similarquotes) == 0 {
+			fmt.Fprintf(w, "")
+			return
+		}
+
+		tmpl := template.Must(template.New("suggestions.html").Funcs(template.FuncMap{
+			"GetTeacherByID": database.GetTeacherByID,
+		}).ParseFiles("pages/suggestions.html"))
+		tmpl.Execute(w, similarquotes)
+	}
 }

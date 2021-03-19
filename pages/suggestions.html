@@ -1,0 +1,9 @@
+<div class="quotelist">
+	{{range .}}
+		<div class="quote">
+			{{if .Context}}Situation: {{.Context}}<br>{{end}}
+			<span class="text" style="display:block">„{{.Text}}“</span>
+			<span class="teacher">~ {{with (GetTeacherByID .TeacherID)}}{{.Title}} {{.Name}}{{if .Note}} ({{.Note}}){{end}}{{end}}</span>
+		</div>
+	{{end}}
+</div>
