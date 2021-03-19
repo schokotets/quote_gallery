@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"log"
+	"sort"
 	"strings"
 
 	// loading postgresql driver
@@ -282,6 +283,38 @@ func GetQuotesAmount() int {
 	defer globalMutex.MinorUnlock()
 
 	return unsafeGetQuotesAmountFromCache()
+}
+
+// GetMaxNQuotesByString returns a slice containing at maximum n, at minimum 0 quotes.
+// The weight variable will indicate how well the given text matches the corresponding quote.
+// It sorts the quotes by weight (QuoteT.Match) and excludes those that do not match whatsoever.
+//
+// Possible returned error type: generic
+func GetMaxNQuotesByString(n int, text string) ([]QuoteT, error) {
+	quotes, err := GetQuotesByString(text)
+	if err != nil {
+		return nil, err
+	}
+
+	var relevantQuotes []QuoteT
+
+	for _,q := range quotes {
+		if q.Match > 0 {
+			relevantQuotes = append(relevantQuotes, q)
+		}
+	}
+
+	sort.Slice(relevantQuotes, func(i, j int) bool {
+		return relevantQuotes[i].Match > relevantQuotes[j].Match
+	})
+
+	amount := len(relevantQuotes)
+
+	if amount > n {
+		amount = n
+	}
+
+	return relevantQuotes[:amount], nil
 }
 
 // GetQuotesByString returns a slice containing all quotes.
