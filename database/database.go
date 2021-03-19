@@ -23,7 +23,7 @@ import (
 // Upvotes    optional
 //
 // Match      exists only locally, not saved in database!
-//              (used by GetQuotesFromString to quantify how well this quote fits the string)
+//              (used by GetQuotesByString to quantify how well this quote fits the search)
 type QuoteT struct {
 	QuoteID   int32
 	TeacherID int32
