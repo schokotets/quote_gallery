@@ -8,13 +8,6 @@ label {
   display: block;
 }
 
-input, select {
-  display: block;
-  line-height: 1.2em;
-  padding: 0.3em;
-  box-sizing:border-box;
-}
-
 p, label {
   line-height: 1.2;
 }
@@ -64,6 +57,13 @@ table a:link, table a:visited {
   color: blue;
 }
 
+input, select, button {
+  display: block;
+  line-height: 1.2em;
+  padding: 0.3em;
+  box-sizing: border-box;
+}
+
 .boxbutton-slim {
   padding: 0.3em 0.5em;
   text-decoration: none;
@@ -74,13 +74,22 @@ table a:link, table a:visited {
   outline: solid 1px black;
 }
 
-.boxbutton {
+.buttonrow {
+  margin: 3em 0
+}
+
+.boxbutton, button, input[type=submit] {
   padding: 0.5em;
   border: solid 1px black;
   text-decoration: none;
   color: black;
+  cursor: pointer;
 }
 
-.buttonrow {
-  margin: 3em 0
+input[type=submit] {
+  background-color: #20f020;
+}
+
+.boxbutton, button {
+  background-color: white;
 }

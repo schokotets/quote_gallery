@@ -1,11 +1,20 @@
 let EDITING = window.location.pathname.includes("edit")
 let form = document.getElementById("form-submit");
 
+let clearformbtn = document.getElementById("clearform");
+clearformbtn.addEventListener("click", clearForm());
+
+function clearForm() {
+  form.reset();
+  checkTeacherSelect();
+  suggestionlist.innerText = "(werden beim Schreiben geladen)";
+  hideConfirmDifferent();
+}
+
 form.addEventListener("submit", processForm);
 
 function processForm(e) {
   e.preventDefault();
-
 
   let req = {};
   req["Text"] = document.getElementById("quotefield").value;
@@ -32,8 +41,7 @@ function processForm(e) {
   }
   request.then(function (res) {
       if(res.status == 200) {
-        form.reset();
-        checkTeacherSelect();
+        clearForm();
         if(EDITING) {
           //hiding form because chrome re-shows last input values
           document.getElementById("form-submit").style.display = "none"
