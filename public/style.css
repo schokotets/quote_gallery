@@ -82,6 +82,14 @@ input, select, button {
   margin: 3em 0
 }
 
+input[type=submit] {
+  background-color: #20f020;
+}
+
+.boxbutton, button {
+  background-color: white;
+}
+
 .boxbutton, button, input[type=submit] {
   padding: 0.5em;
   border: solid 1px black;
@@ -90,10 +98,7 @@ input, select, button {
   cursor: pointer;
 }
 
-input[type=submit] {
-  background-color: #20f020;
-}
-
-.boxbutton, button {
-  background-color: white;
+.boxbutton[disabled], button[disabled], input[type=submit][disabled] {
+  background-color: #999;
+  cursor: not-allowed;
 }

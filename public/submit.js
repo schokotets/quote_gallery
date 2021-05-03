@@ -1,6 +1,8 @@
 let EDITING = window.location.pathname.includes("edit");
 let form = document.getElementById("form-submit");
 
+let quotefield = document.getElementById("quotefield");
+let contextfield = document.getElementById("contextfield");
 let teacherselect = document.getElementById("teacherselect");
 let customteacher = document.getElementsByClassName("customteacher")[0];
 let customteacherfield = document.getElementById("customteacherfield");
@@ -10,6 +12,7 @@ let suggestionlist = document.getElementById("suggestionlist");
 let confirmdifferent = document.getElementById("confirmdifferent");
 let confirmdifferentcheckbox = document.getElementById("confirmdifferentcheckbox");
 
+let submitbtn = document.getElementById("submitbtn");
 let clearformbtn = document.getElementById("clearform");
 clearformbtn.addEventListener("click", clearForm());
 
@@ -26,17 +29,17 @@ function processForm(e) {
   e.preventDefault();
 
   let req = {};
-  req["Text"] = document.getElementById("quotefield").value;
+  req["Text"] = quotefield.value;
 
-  let context = document.getElementById("contextfield").value;
+  let context = contextfield.value;
   if (context || EDITING){
     req["Context"] = context;
   }
-  let teacherid = document.getElementById("teacherselect").value;
+  let teacherid = teacherselect.value;
   if (teacherid){
     req["Teacher"] = parseInt(teacherid);
   } else {
-    let teachername = document.getElementById("customteacherfield").value;
+    let teachername = customteacherfield.value;
     if (teachername) {
       req["Teacher"] = teachername;
     }
@@ -105,7 +108,6 @@ function checkTeacherSelect(e) {
   }
 }
 
-let quotefield = document.getElementById("quotefield");
 quotefield.addEventListener("input", quoteTextInput);
 
 let lasttimeout;
@@ -132,11 +134,34 @@ function quoteTextInput() {
 function hideConfirmDifferent() {
   confirmdifferent.style.display = "none";
   confirmdifferentcheckbox.removeAttribute("required");
+  updateSubmitButtonState();
 }
 
 function showConfirmDifferent() {
   confirmdifferent.style.display = "unset";
   confirmdifferentcheckbox.setAttribute("required", true);
+  updateSubmitButtonState();
+}
+
+quotefield.addEventListener("change", updateSubmitButtonState);
+teacherselect.addEventListener("change", updateSubmitButtonState);
+customteacherfield.addEventListener("change", updateSubmitButtonState);
+confirmdifferent.addEventListener("change", updateSubmitButtonState);
+customteachercheckbox.addEventListener("change", updateSubmitButtonState);
+
+function updateSubmitButtonState() {
+  let allrequiredfilled = true;
+  for (let e of document.querySelectorAll('[required]')) {
+    if (!e.value || (e.type == "checkbox" && !e.checked)) {
+      allrequiredfilled = false;
+      break;
+    }
+  }
+  if (allrequiredfilled) {
+    submitbtn.removeAttribute("disabled");
+  } else {
+    submitbtn.setAttribute("disabled", "disabled");
+  }
 }
 
 function fetchSimilarQuotes() {
