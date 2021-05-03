@@ -38,12 +38,16 @@ type occurenceSliceT struct {
 //
 // important: the index of a quote in quoteSlice is called its enumID
 // which is used to quickly identify a quote with the wordsMap
+//
+// voteSlice doesn't require the UserID-field of VoteT, because the UserID is already
+// used as index of voteSlice. But for the sake of not defining a second vote-struct,
+// the one defined in database.go is used 
 var cache struct {
 	quoteSlice   []QuoteT
 	teacherSlice []TeacherT
 	wordsMap     map[string]wordsMapT
 	userSlice    []UserT
-	voteSlice    [][]int32
+	voteSlice    [][]VoteT
 }
 
 /* -------------------------------------------------------------------------- */
@@ -167,7 +171,8 @@ func unsafeLoadCache() error {
 	// get all votes from database
 	rows, err = database.Query(`SELECT 
 		UserID,
-		QuoteID FROM votes`)
+		QuoteID,
+		Rating FROM votes`)
 
 	if err != nil {
 		return errors.New("unsafeLoadCache: loading votes from database failed: " + err.Error())
@@ -176,16 +181,16 @@ func unsafeLoadCache() error {
 	// Iterrate over all votes from database
 	for rows.Next() {
 		// Get vote data (userid, quoteid)
-		var u, q int32
+		var vote VoteT
 
-		err = rows.Scan(&u, &q)
+		err = rows.Scan(&vote.UserID, &vote.QuoteID, &vote.Rating)
 		if err != nil {
 			return errors.New("unsafeLoadCache: parsing votes failed: " + err.Error())
 		}
 
 		// add to local database
 		// unsafe, because cache is already locked for writing
-		err = unsafeAddVoteToCache(u, q)
+		err = unsafeAddVoteToCache(vote)
 		if err != nil {
 			return errors.New("unsafeLoadCache: adding vote to cache failed: " + err.Error())
 		}
@@ -241,31 +246,52 @@ func unsafeAddUserToCache(u UserT) {
 }
 
 // unsafe functions aren't concurrency safe
-func unsafeAddVoteToCache(u int32, q int32) error {
-	if u < 1 {
+func unsafeAddVoteToCache(vote VoteT) error {
+	if vote.UserID < 1 {
 		// u must be greater than zero to be a valid UserID
 		return errors.New("unsafeAddVoteToCache: invalid UserID, must be greater than zero")
 	}
 
-	for len(cache.voteSlice) < int(u) {
-		cache.voteSlice = append(cache.voteSlice, []int32{})
+	if vote.Rating < 1 || vote.Rating > 5 {
+		return errors.New("unsafeAddVoteToCache: invalid Rating, must be in range 1-5")
+	} 
+
+	for len(cache.voteSlice) < int(vote.UserID) {
+		cache.voteSlice = append(cache.voteSlice, []VoteT{})
 	}
 
-	for _, v := range cache.voteSlice[u-1] {
-		if v == q {
+	for i, oldVote := range cache.voteSlice[vote.UserID-1] {
+		if oldVote.QuoteID == vote.QuoteID {
 			// already voted - that's not a problem
+			// old vote gets overwritten
+
+			for j, quote := range cache.quoteSlice {
+				if quote.QuoteID == vote.QuoteID {
+					cache.quoteSlice[j].ratingData.sum += int32(vote.Rating - oldVote.Rating)
+					cache.quoteSlice[j].PublicRating = float32(cache.quoteSlice[j].ratingData.sum) /
+												 	   float32(cache.quoteSlice[j].ratingData.num)
+					break
+				}
+			}
+
+			cache.voteSlice[vote.UserID-1][i]=vote
+
 			return nil
 		}
 	}
 
-	cache.voteSlice[u-1] = append(cache.voteSlice[u-1], q)
-
-	for i, v := range cache.quoteSlice {
-		if v.QuoteID == q {
-			cache.quoteSlice[i].Upvotes++
+	for i, quote := range cache.quoteSlice {
+		if quote.QuoteID == vote.QuoteID {
+			cache.quoteSlice[i].ratingData.num++
+			cache.quoteSlice[i].ratingData.sum += int32(vote.Rating)
+			cache.quoteSlice[i].PublicRating = float32(cache.quoteSlice[i].ratingData.sum) /
+											   float32(cache.quoteSlice[i].ratingData.num)
 			break
 		}
 	}
+
+	cache.voteSlice[vote.UserID-1] = append(cache.voteSlice[vote.UserID-1], vote)
+
 	return nil
 }
 
@@ -286,7 +312,7 @@ func unsafeOverwriteTeacherInCache(t TeacherT) error {
 	return nil
 }
 
-// Unixtime, Voted, Upvotes and Match fields will be ignored
+// any fields beside QuoteID, TeacherID, Context, Text will be ignored
 func unsafeOverwriteQuoteInCache(q QuoteT) error {
 
 	var enumID int32 = -1
@@ -440,29 +466,32 @@ func unsafeDeleteQuoteFromCache(ID int32) error {
 	return nil
 }
 
-func unsafeDeleteVoteFromCache(u int32, q int32) error {
-	if u < 1 || len(cache.voteSlice) < int(u) {
+// Rating fiels will be ignored
+func unsafeDeleteVoteFromCache(vote VoteT) error {
+	if vote.UserID < 1 || len(cache.voteSlice) < int(vote.UserID) {
 		// u must be greater than zero to be a valid UserID
 		// u is used as index in cache.voteSlice, hence cannot be greater than the length of the slice
 		return errors.New("unsafeDeleteVoteFromCache: invalid UserID")
 	}
 	
-	a := cache.voteSlice[u-1]
-	for i, v := range a {
-		if v == q {
-			a[i] = a[len(a)-1]
-			a[len(a)-1] = 0
-			cache.voteSlice[u-1] = a[:len(a)-1]
+	a := cache.voteSlice[vote.UserID-1]
+	for i, rmVote := range a {
+		if rmVote.QuoteID == vote.QuoteID {
 
-			for i, v := range cache.quoteSlice {
-				if v.QuoteID == q {
-					if cache.quoteSlice[i].Upvotes > 0 {
-						cache.quoteSlice[i].Upvotes--
-					}
+			for j, quote := range cache.quoteSlice {
+				if quote.QuoteID == vote.QuoteID {
+					cache.quoteSlice[j].ratingData.num--
+					cache.quoteSlice[j].ratingData.sum -= int32(rmVote.Rating)
+					cache.quoteSlice[j].PublicRating = float32(cache.quoteSlice[j].ratingData.sum) /
+												 	   float32(cache.quoteSlice[j].ratingData.num)
 					break
 				}
 			}
 			
+			a[i] = a[len(a)-1]
+			a[len(a)-1] = VoteT{}
+			cache.voteSlice[vote.UserID-1] = a[:len(a)-1]
+
 			break
 		}
 	}

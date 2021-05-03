@@ -21,9 +21,9 @@ import (
 // Text       the text of the quote itself
 // Unixtime   the time of submission; optional
 //
-// Voted	  exists only locally, not saved in database! \ Created from
-// Upvotes    exists only locally, not saved in database! / votes table
-// Match      exists only locally, not saved in database!
+// MyRating	    exists only locally, not saved in database! \ Created from
+// PublicRating exists only locally, not saved in database! / votes table
+// Match        exists only locally, not saved in database!
 //              (used by GetQuotesFromString to quantify how well this quote fits the string)
 type QuoteT struct {
 	QuoteID   int32
@@ -31,9 +31,17 @@ type QuoteT struct {
 	Context   string
 	Text      string
 	Unixtime  int64
-	Voted     bool
-	Upvotes   int32
-	Match     float32
+	
+	MyRating     int8
+	PublicRating float32
+	Match        float32
+
+	// Not exported, used for calculation of Rating
+	ratingData struct{
+		sum int32	// Sum of all Ratings
+		num int32	// Number of Ratings
+	}
+
 }
 
 // UnverifiedQuoteT stores one unverified quote
@@ -78,6 +86,15 @@ type UserT struct {
 	Admin    bool
 }
 
+// VoteT stores one vote
+// UserID  the unique ID of the user voting
+// QuoteID the unique ID of the quote voted
+// Rating  the Rating in the range 1-5
+type VoteT struct {
+	UserID  int32
+	QuoteID int32
+	Rating  int8
+}
 
 /* -------------------------------------------------------------------------- */
 /*                          GLOBAL PACKAGE VARIABLES                          */
@@ -208,7 +225,8 @@ func Initialize() error {
 		`CREATE TABLE IF NOT EXISTS votes (
 		Hash bigint PRIMARY KEY,
 		UserID integer REFERENCES users (UserID) ON DELETE CASCADE,
-		QuoteID integer REFERENCES quotes (QuoteID) ON DELETE CASCADE)`)
+		QuoteID integer REFERENCES quotes (QuoteID) ON DELETE CASCADE,
+		Rating smallint)`)
 	if err != nil {
 		database.Close()
 		return DBError{ "Initialize: creating votes table failed", err }
@@ -952,13 +970,17 @@ func GetUsernameByID(userid int32) (string, error) {
 /*                          EXPORTED VOTING FUNCTIONS                         */
 /* -------------------------------------------------------------------------- */
 
-// AddVote adds a vote from one user for one quote to the database
-func AddVote(u int32, q int32) error {
-	if u < 1 {
+// AddVote adds a vote with Rating (1-5) from one user for one quote to the database
+func AddVote(vote VoteT) error {
+	if vote.UserID < 1 {
 		// u must be greater than zero to be a valid UserID
 		return errors.New("AddVote: invalid UserID, must be greater than zero")
 	}
 	
+	if vote.Rating < 1 || vote.Rating > 5 {
+		return errors.New("AddVote: invalid Rating, must be in range 1-5")
+	} 
+
 	// Verify connection to database
 	err := database.Ping()
 	if err != nil {
@@ -966,32 +988,30 @@ func AddVote(u int32, q int32) error {
 		return DBError{ "AddVote: pinging database failed", err }
 	}
 
-	// add vote to database
-	var res sql.Result
-	res, err = database.Exec(
-		`INSERT INTO votes (Hash, UserID, QuoteID) VALUES ($1, $2, $3) 
-		 ON CONFLICT (Hash) DO NOTHING `, voteHash(u, q), u, q)
+	// add vote to database, update if necessary
+	_, err = database.Exec(
+		`INSERT INTO votes (Hash, UserID, QuoteID, Rating) VALUES ($1, $2, $3, $4) 
+		 ON CONFLICT (Hash) DO UPDATE SET
+		 	UserID=EXCLUDED.UserID, QuoteID=EXCLUDED.QuoteID, Rating=EXCLUDED.Rating;`, 
+		voteHash(vote), vote.UserID, vote.QuoteID, vote.Rating)
+	
 	if err != nil {
 		return DBError{ "AddVote: inserting vote into database failed", err }
-	}
-
-	if rowsAffected, _ := res.RowsAffected(); rowsAffected == 0 {
-		// already voted - that's not a problem
-		return nil
 	}
 
 	globalMutex.MajorLock()
 	defer globalMutex.MajorUnlock()
 
 	// add vote to cache
-	unsafeAddVoteToCache(u, q)
+	unsafeAddVoteToCache(vote)
 	
 	return nil
 }
 
 // DeleteVote deletes a vote from one user for one quote from the database
-func DeleteVote(u int32, q int32) error {
-	if u < 1 {
+// Rating is ignored
+func DeleteVote(vote VoteT) error {
+	if vote.UserID < 1 {
 		// u must be greater than zero to be a valid UserID
 		return errors.New("DeleteVote: invalid UserID, must be greater than zero")
 	}
@@ -1006,7 +1026,7 @@ func DeleteVote(u int32, q int32) error {
 	// add vote to database
 	var res sql.Result
 	res, err = database.Exec(
-		`DELETE FROM votes WHERE Hash = $1`, voteHash(u, q))
+		`DELETE FROM votes WHERE Hash = $1`, voteHash(vote))
 	if err != nil {
 		return DBError{ "DeleteVote: deleting vote from database failed", err }
 	}
@@ -1020,7 +1040,7 @@ func DeleteVote(u int32, q int32) error {
 	defer globalMutex.MajorUnlock()
 
 	// add vote to cache
-	unsafeDeleteVoteFromCache(u, q)
+	unsafeDeleteVoteFromCache(vote)
 	
 	return nil
 }
@@ -1030,6 +1050,6 @@ func DeleteVote(u int32, q int32) error {
 /*                         UNEXPORTED HELPER FUNCTIONS                        */
 /* -------------------------------------------------------------------------- */
 
-func voteHash(u int32, q int32) int64 {
-	return int64(u)<<32 | int64(q)
+func voteHash(vote VoteT) int64 {
+	return int64(vote.UserID)<<32 | int64(vote.QuoteID)
 }
