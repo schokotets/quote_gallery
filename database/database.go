@@ -174,6 +174,19 @@ func Initialize() error {
 		return DBError{ "Initialize: creating quotes table failed", err }
 	}
 
+	// Create users table in database if it doesn't exist
+	// for more information see UserT declaration
+	_, err = database.Exec(
+		`CREATE TABLE IF NOT EXISTS users (
+		UserID serial PRIMARY KEY,
+		Name varchar,
+		Password varchar,
+		Admin boolean)`)
+	if err != nil {
+		database.Close()
+		return DBError{ "Initialize: creating users table failed", err }
+	}
+
 	// Create unverifiedQuotes table in database if it doesn't exist
 	// for more information see UnverifiedQuoteT declaration
 	_, err = database.Exec(
@@ -188,19 +201,6 @@ func Initialize() error {
 	if err != nil {
 		database.Close()
 		return DBError{ "Initialize: creating unverifiedQuotes table failed", err }
-	}
-
-	// Create users table in database if it doesn't exist
-	// for more information see UserT declaration
-	_, err = database.Exec(
-		`CREATE TABLE IF NOT EXISTS users (
-		UserID serial PRIMARY KEY,
-		Name varchar,
-		Password varchar,
-		Admin boolean)`)
-	if err != nil {
-		database.Close()
-		return DBError{ "Initialize: creating users table failed", err }
 	}
 
 	// Create votes table in database if it doesn't exist
