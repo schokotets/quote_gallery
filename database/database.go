@@ -965,9 +965,8 @@ func GetUsernameByID(userid int32) (string, error) {
 	return username, nil
 }
 
-// AddUserDataToQuote adds all the user specific information to the quote or quotes
-// i is either a reference to a quote or a slice of quotes
-func AddUserDataToQuote(i interface{}, userid int32) error {
+// AddUserDataToQuotes adds all the user specific information to the quotes
+func AddUserDataToQuotes(quotes []QuoteT, userid int32) error {
 	if userid < 1 {
 		// u must be greater than zero to be a valid UserID
 		return errors.New("AddUserDataToQuote: invalid UserID, must be greater than zero")
@@ -976,15 +975,8 @@ func AddUserDataToQuote(i interface{}, userid int32) error {
 	globalMutex.MinorLock()
 	defer globalMutex.MinorUnlock()
 
-	switch v := i.(type) {
-	case *QuoteT:
-		unsafeAddUserDataToQuote(v, userid)
-	case []QuoteT:
-		for i := range v {
-			unsafeAddUserDataToQuote(&v[i], userid)
-		}
-	default:
-		return errors.New("AddUserData: invalid type")
+	for i := range quotes {
+		unsafeAddUserDataToQuote(&quotes[i], userid)
 	}
 
 	return nil
