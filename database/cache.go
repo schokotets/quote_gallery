@@ -567,6 +567,22 @@ func unsafeGetUserFromCache(name string, password string) UserT {
 	return UserT{}
 }
 
+func unsafeAddUserDataToQuote(q *QuoteT, userid int32) error {
+	if userid < 1 || len(cache.voteSlice) < int(userid) {
+		// u must be greater than zero to be a valid UserID
+		// u is used as index in cache.voteSlice, hence cannot be greater than the length of the slice
+		return errors.New("unsafeAddUserDataToQuote: invalid UserID")
+	}
+
+	for _,vote := range cache.voteSlice[userid-1] {
+		if vote.QuoteID == q.QuoteID {
+			q.MyRating = vote.Rating
+			break
+		}
+	}
+	return nil
+}
+
 // PrintWordsMap is a debugging function
 func PrintWordsMap() {
 	log.Print(cache.wordsMap)
