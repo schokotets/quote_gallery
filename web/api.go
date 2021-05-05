@@ -434,3 +434,53 @@ func putAPITeachersID(w http.ResponseWriter, r *http.Request, u int32) {
 		return
 	}
 }
+
+func putAPIQuotesIDVoteRating(w http.ResponseWriter, r *http.Request, u int32) {
+	quoteid, err := strconv.Atoi(mux.Vars(r)["id"])
+	if err != nil {
+		// This should not happend, because this handler is only called if
+		// uri pattern is matched, see web.go
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "cannot convert in-url id to int")
+		return
+	}
+
+	if quoteid == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "invalid QuoteID: 0")
+		return
+	}
+
+	val, err := strconv.Atoi(mux.Vars(r)["val"])
+	if err != nil {
+		// This should not happend, because this handler is only called if
+		// uri pattern is matched, see web.go
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "cannot convert in-url vote val to int")
+		return
+	}
+
+	quote, err := database.AddVote(database.VoteT{
+		QuoteID: int32(quoteid),
+		UserID: u,
+		Val: int8(val),
+	})
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, err.Error())
+		return
+	}
+
+	b, err := json.Marshal(quote.Stats)
+	
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "marshalling to json failed")
+		return
+	}
+	
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, string(b))
+	return
+}
