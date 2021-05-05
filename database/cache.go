@@ -2,6 +2,7 @@ package database
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"strings"
 )
@@ -252,8 +253,8 @@ func unsafeAddVoteToCache(vote VoteT) error {
 		return errors.New("unsafeAddVoteToCache: invalid UserID, must be greater than zero")
 	}
 
-	if vote.Rating < 1 || vote.Rating > 5 {
-		return errors.New("unsafeAddVoteToCache: invalid Rating, must be in range 1-5")
+	if vote.Rating < MyRatingMin || vote.Rating > MyRatingMax {
+		return errors.New(fmt.Sprintf("unsafeAddVoteToCache: invalid Rating, must be in range %d-%d", MyRatingMin, MyRatingMax))
 	} 
 
 	for len(cache.voteSlice) < int(vote.UserID) {
@@ -267,9 +268,10 @@ func unsafeAddVoteToCache(vote VoteT) error {
 
 			for j, quote := range cache.quoteSlice {
 				if quote.QuoteID == vote.QuoteID {
-					cache.quoteSlice[j].ratingData.sum += int32(vote.Rating - oldVote.Rating)
-					cache.quoteSlice[j].PublicRating = float32(cache.quoteSlice[j].ratingData.sum) /
-												 	   float32(cache.quoteSlice[j].ratingData.num)
+					cache.quoteSlice[j].ratingSum += int32(vote.Rating - oldVote.Rating)
+					cache.quoteSlice[j].PublicRating = float32(cache.quoteSlice[j].ratingSum) /
+												 	   float32(unsafeGetUsersAmountFromCache()) + 
+													   MyRatingDefault
 					break
 				}
 			}
@@ -282,10 +284,10 @@ func unsafeAddVoteToCache(vote VoteT) error {
 
 	for i, quote := range cache.quoteSlice {
 		if quote.QuoteID == vote.QuoteID {
-			cache.quoteSlice[i].ratingData.num++
-			cache.quoteSlice[i].ratingData.sum += int32(vote.Rating)
-			cache.quoteSlice[i].PublicRating = float32(cache.quoteSlice[i].ratingData.sum) /
-											   float32(cache.quoteSlice[i].ratingData.num)
+			cache.quoteSlice[i].ratingSum += ( int32(vote.Rating) - MyRatingDefault )
+			cache.quoteSlice[i].PublicRating = float32(cache.quoteSlice[i].ratingSum) /
+											   float32(unsafeGetUsersAmountFromCache()) +
+											   MyRatingDefault
 			break
 		}
 	}
@@ -466,39 +468,6 @@ func unsafeDeleteQuoteFromCache(ID int32) error {
 	return nil
 }
 
-// Rating fiels will be ignored
-func unsafeDeleteVoteFromCache(vote VoteT) error {
-	if vote.UserID < 1 || len(cache.voteSlice) < int(vote.UserID) {
-		// u must be greater than zero to be a valid UserID
-		// u is used as index in cache.voteSlice, hence cannot be greater than the length of the slice
-		return errors.New("unsafeDeleteVoteFromCache: invalid UserID")
-	}
-	
-	a := cache.voteSlice[vote.UserID-1]
-	for i, rmVote := range a {
-		if rmVote.QuoteID == vote.QuoteID {
-
-			for j, quote := range cache.quoteSlice {
-				if quote.QuoteID == vote.QuoteID {
-					cache.quoteSlice[j].ratingData.num--
-					cache.quoteSlice[j].ratingData.sum -= int32(rmVote.Rating)
-					cache.quoteSlice[j].PublicRating = float32(cache.quoteSlice[j].ratingData.sum) /
-												 	   float32(cache.quoteSlice[j].ratingData.num)
-					break
-				}
-			}
-			
-			a[i] = a[len(a)-1]
-			a[len(a)-1] = VoteT{}
-			cache.voteSlice[vote.UserID-1] = a[:len(a)-1]
-
-			break
-		}
-	}
-
-	return nil
-}
-
 // Returns maximum amount of n quotes from cache starting from index from.
 // Returns nil if starting index is too big.
 func unsafeGetNQuotesFromFromCache(n, from int) []QuoteT {
@@ -567,6 +536,10 @@ func unsafeGetUserFromCache(name string, password string) UserT {
 	return UserT{}
 }
 
+func unsafeGetUsersAmountFromCache() int32 {
+	return int32(len(cache.userSlice))
+}
+
 func unsafeAddUserDataToQuote(q *QuoteT, userid int32) error {
 	if userid < 1 || len(cache.voteSlice) < int(userid) {
 		// u must be greater than zero to be a valid UserID
@@ -577,9 +550,12 @@ func unsafeAddUserDataToQuote(q *QuoteT, userid int32) error {
 	for _,vote := range cache.voteSlice[userid-1] {
 		if vote.QuoteID == q.QuoteID {
 			q.MyRating = vote.Rating
-			break
+			return nil
 		}
 	}
+
+	q.MyRating = MyRatingNone
+
 	return nil
 }
 

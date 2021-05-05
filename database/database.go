@@ -3,12 +3,22 @@ package database
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
 	"strings"
 
 	// loading postgresql driver
 	_ "github.com/lib/pq"
 )
+
+/* -------------------------------------------------------------------------- */
+/*                                  CONSTANTS                                 */
+/* -------------------------------------------------------------------------- */
+
+const MyRatingDefault = 3
+const MyRatingMax = 5
+const MyRatingMin = 1
+const MyRatingNone = 0
 
 /* -------------------------------------------------------------------------- */
 /*                                 DEFINITIONS                                */
@@ -37,11 +47,7 @@ type QuoteT struct {
 	Match        float32
 
 	// Not exported, used for calculation of Rating
-	ratingData struct{
-		sum int32	// Sum of all Ratings
-		num int32	// Number of Ratings
-	}
-
+	ratingSum int32	// Sum of all Ratings
 }
 
 // UnverifiedQuoteT stores one unverified quote
@@ -994,8 +1000,8 @@ func AddVote(vote VoteT) error {
 	}
 	
 	if vote.Rating < 1 || vote.Rating > 5 {
-		return errors.New("AddVote: invalid Rating, must be in range 1-5")
-	} 
+		return errors.New(fmt.Sprintf("AddVote: invalid Rating, must be in range %d-%d", MyRatingMin, MyRatingMax))
+	}
 
 	// Verify connection to database
 	err := database.Ping()
@@ -1023,44 +1029,6 @@ func AddVote(vote VoteT) error {
 	
 	return nil
 }
-
-// DeleteVote deletes a vote from one user for one quote from the database
-// Rating is ignored
-func DeleteVote(vote VoteT) error {
-	if vote.UserID < 1 {
-		// u must be greater than zero to be a valid UserID
-		return errors.New("DeleteVote: invalid UserID, must be greater than zero")
-	}
-	
-	// Verify connection to database
-	err := database.Ping()
-	if err != nil {
-		database.Close()
-		return DBError{ "DeleteVote: pinging database failed", err }
-	}
-
-	// add vote to database
-	var res sql.Result
-	res, err = database.Exec(
-		`DELETE FROM votes WHERE Hash = $1`, voteHash(vote))
-	if err != nil {
-		return DBError{ "DeleteVote: deleting vote from database failed", err }
-	}
-
-	if rowsAffected, _ := res.RowsAffected(); rowsAffected == 0 {
-		// not voted - that's not a problem
-		return nil
-	}
-
-	globalMutex.MajorLock()
-	defer globalMutex.MajorUnlock()
-
-	// add vote to cache
-	unsafeDeleteVoteFromCache(vote)
-	
-	return nil
-}
-
 
 /* -------------------------------------------------------------------------- */
 /*                         UNEXPORTED HELPER FUNCTIONS                        */
