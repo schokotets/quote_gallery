@@ -101,7 +101,7 @@ func postAPIQuotesSubmit(w http.ResponseWriter, r *http.Request, u int32) {
 func putAPIUnverifiedQuotesID(w http.ResponseWriter, r *http.Request, u int32) {
 	id, err := strconv.Atoi(mux.Vars(r)["id"])
 	if err != nil {
-		// This should not happend, because handlerAPIUnverifiedQuotes is only called if
+		// This should not happend, because this handler is only called if
 		// uri pattern is matched, see web.go
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "cannot convert in-url id to int")
@@ -179,7 +179,7 @@ func putAPIUnverifiedQuotesID(w http.ResponseWriter, r *http.Request, u int32) {
 func deleteAPIUnverifiedQuotesID(w http.ResponseWriter, r *http.Request, u int32) {
 	id, err := strconv.Atoi(mux.Vars(r)["id"])
 	if err != nil {
-		// This should not happend, because handlerAPIUnverifiedQuotes is only called if
+		// This should not happend, because this handler is only called if
 		// uri pattern is matched, see web.go
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "cannot convert in-url id to int")
@@ -210,7 +210,7 @@ func deleteAPIUnverifiedQuotesID(w http.ResponseWriter, r *http.Request, u int32
 func putAPIUnverifiedQuotesIDConfirm(w http.ResponseWriter, r *http.Request, u int32) {
 	id, err := strconv.Atoi(mux.Vars(r)["id"])
 	if err != nil {
-		// This should not happend, because handlerAPIUnverifiedQuotes is only called if
+		// This should not happend, because this handler is only called if
 		// uri pattern is matched, see web.go
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "cannot convert in-url id to int")
@@ -382,7 +382,7 @@ func postAPITeachers(w http.ResponseWriter, r *http.Request, u int32) {
 func putAPITeachersID(w http.ResponseWriter, r *http.Request, u int32) {
 	id, err := strconv.Atoi(mux.Vars(r)["id"])
 	if err != nil {
-		// This should not happend, because handlerAPIUnverifiedQuotes is only called if
+		// This should not happend, because this handler is only called if
 		// uri pattern is matched, see web.go
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "cannot convert in-url id to int")
