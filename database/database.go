@@ -15,10 +15,10 @@ import (
 /*                                  CONSTANTS                                 */
 /* -------------------------------------------------------------------------- */
 
-const MyRatingDefault = 3
-const MyRatingMax = 5
-const MyRatingMin = 1
-const MyRatingNone = 0
+const VoteDefault = 3
+const VoteMax = 5
+const VoteMin = 1
+const VoteNone = 0
 
 /* -------------------------------------------------------------------------- */
 /*                                 DEFINITIONS                                */
@@ -31,10 +31,15 @@ const MyRatingNone = 0
 // Text       the text of the quote itself
 // Unixtime   the time of submission; optional
 //
-// MyRating	    exists only locally, not saved in database! \ Created from
-// PublicRating exists only locally, not saved in database! / votes table
-// Match        exists only locally, not saved in database!
-//              (used by GetQuotesFromString to quantify how well this quote fits the string)
+// Stats	exists only locally, not saved in database!  \ 
+//    Pop	measure of the quote's popularity			 | 		
+//    Con	measure of the quote's controversy			 | Created from
+//    Data	array of the vote distribution				 | votes table
+// MyVote	exists only locally, not saved in database!  |
+// 			(used by AddUserDataToQuotes)				 /
+//
+// Match	exists only locally, not saved in database!
+// 			(used by GetQuotesFromString to quantify how well this quote fits the string)
 type QuoteT struct {
 	QuoteID   int32
 	TeacherID int32
@@ -42,12 +47,16 @@ type QuoteT struct {
 	Text      string
 	Unixtime  int64
 	
-	MyRating     int8
-	PublicRating float32
-	Match        float32
-
-	// Not exported, used for calculation of Rating
-	ratingSum int32	// Sum of all Ratings
+	Stats struct {
+		Pop float32
+		Con float32
+		Data [VoteMax - VoteMin + 1]int32
+	}
+	
+	// user / request specific
+	MyVote int8
+	Match  float32
+	
 }
 
 // UnverifiedQuoteT stores one unverified quote
@@ -99,7 +108,7 @@ type UserT struct {
 type VoteT struct {
 	UserID  int32
 	QuoteID int32
-	Rating  int8
+	Val 	int8
 }
 
 /* -------------------------------------------------------------------------- */
@@ -993,21 +1002,21 @@ func AddUserDataToQuotes(quotes []QuoteT, userid int32) error {
 /* -------------------------------------------------------------------------- */
 
 // AddVote adds a vote with Rating (1-5) from one user for one quote to the database
-func AddVote(vote VoteT) error {
+func AddVote(vote VoteT) (QuoteT, error) {
 	if vote.UserID < 1 {
 		// u must be greater than zero to be a valid UserID
-		return errors.New("AddVote: invalid UserID, must be greater than zero")
+		return QuoteT{}, errors.New("AddVote: invalid UserID, must be greater than zero")
 	}
 	
-	if vote.Rating < 1 || vote.Rating > 5 {
-		return errors.New(fmt.Sprintf("AddVote: invalid Rating, must be in range %d-%d", MyRatingMin, MyRatingMax))
+	if vote.Val < 1 || vote.Val > 5 {
+		return QuoteT{}, errors.New(fmt.Sprintf("AddVote: invalid Rating, must be in range %d-%d", VoteMin, VoteMax))
 	}
 
 	// Verify connection to database
 	err := database.Ping()
 	if err != nil {
 		database.Close()
-		return DBError{ "AddVote: pinging database failed", err }
+		return QuoteT{}, DBError{ "AddVote: pinging database failed", err }
 	}
 
 	// add vote to database, update if necessary
@@ -1015,19 +1024,17 @@ func AddVote(vote VoteT) error {
 		`INSERT INTO votes (Hash, UserID, QuoteID, Rating) VALUES ($1, $2, $3, $4) 
 		 ON CONFLICT (Hash) DO UPDATE SET
 		 	UserID=EXCLUDED.UserID, QuoteID=EXCLUDED.QuoteID, Rating=EXCLUDED.Rating;`, 
-		voteHash(vote), vote.UserID, vote.QuoteID, vote.Rating)
+		voteHash(vote), vote.UserID, vote.QuoteID, vote.Val)
 	
 	if err != nil {
-		return DBError{ "AddVote: inserting vote into database failed", err }
+		return QuoteT{}, DBError{ "AddVote: inserting vote into database failed", err }
 	}
 
 	globalMutex.MajorLock()
 	defer globalMutex.MajorUnlock()
 
 	// add vote to cache
-	unsafeAddVoteToCache(vote)
-	
-	return nil
+	return unsafeAddVoteToCache(vote) 
 }
 
 /* -------------------------------------------------------------------------- */

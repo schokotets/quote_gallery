@@ -184,14 +184,14 @@ func unsafeLoadCache() error {
 		// Get vote data (userid, quoteid)
 		var vote VoteT
 
-		err = rows.Scan(&vote.UserID, &vote.QuoteID, &vote.Rating)
+		err = rows.Scan(&vote.UserID, &vote.QuoteID, &vote.Val)
 		if err != nil {
 			return errors.New("unsafeLoadCache: parsing votes failed: " + err.Error())
 		}
 
 		// add to local database
 		// unsafe, because cache is already locked for writing
-		err = unsafeAddVoteToCache(vote)
+		_, err = unsafeAddVoteToCache(vote)
 		if err != nil {
 			return errors.New("unsafeLoadCache: adding vote to cache failed: " + err.Error())
 		}
@@ -247,14 +247,14 @@ func unsafeAddUserToCache(u UserT) {
 }
 
 // unsafe functions aren't concurrency safe
-func unsafeAddVoteToCache(vote VoteT) error {
+func unsafeAddVoteToCache(vote VoteT) (QuoteT, error) {
 	if vote.UserID < 1 {
 		// u must be greater than zero to be a valid UserID
-		return errors.New("unsafeAddVoteToCache: invalid UserID, must be greater than zero")
+		return QuoteT{}, errors.New("unsafeAddVoteToCache: invalid UserID, must be greater than zero")
 	}
 
-	if vote.Rating < MyRatingMin || vote.Rating > MyRatingMax {
-		return errors.New(fmt.Sprintf("unsafeAddVoteToCache: invalid Rating, must be in range %d-%d", MyRatingMin, MyRatingMax))
+	if vote.Val < VoteMin || vote.Val > VoteMax {
+		return QuoteT{}, errors.New(fmt.Sprintf("unsafeAddVoteToCache: invalid Rating, must be in range %d-%d", VoteMin, VoteMax))
 	} 
 
 	for len(cache.voteSlice) < int(vote.UserID) {
@@ -268,33 +268,35 @@ func unsafeAddVoteToCache(vote VoteT) error {
 
 			for j, quote := range cache.quoteSlice {
 				if quote.QuoteID == vote.QuoteID {
-					cache.quoteSlice[j].ratingSum += int32(vote.Rating - oldVote.Rating)
-					cache.quoteSlice[j].PublicRating = float32(cache.quoteSlice[j].ratingSum) /
-												 	   float32(unsafeGetUsersAmountFromCache()) + 
-													   MyRatingDefault
-					break
+					cache.quoteSlice[j].Stats.Data[oldVote.Val-1] -= 1
+					cache.quoteSlice[j].Stats.Data[vote.Val-1] += 1
+					cache.voteSlice[vote.UserID-1][i]=vote
+					
+					calculateQuoteStats(&cache.quoteSlice[j])
+
+					return cache.quoteSlice[j], nil
 				}
 			}
 
-			cache.voteSlice[vote.UserID-1][i]=vote
-
-			return nil
+			// something went wrong, quote doesn't exist (anymore)
+			return QuoteT{}, errors.New(fmt.Sprintf("unsafeAddVoteToCache: quote with QuoteID %d doesn't exist (anymore)", vote.QuoteID))
+			
 		}
 	}
 
 	for i, quote := range cache.quoteSlice {
 		if quote.QuoteID == vote.QuoteID {
-			cache.quoteSlice[i].ratingSum += ( int32(vote.Rating) - MyRatingDefault )
-			cache.quoteSlice[i].PublicRating = float32(cache.quoteSlice[i].ratingSum) /
-											   float32(unsafeGetUsersAmountFromCache()) +
-											   MyRatingDefault
-			break
+			cache.quoteSlice[i].Stats.Data[vote.Val-1] += 1
+			cache.voteSlice[vote.UserID-1] = append(cache.voteSlice[vote.UserID-1], vote)
+			
+			calculateQuoteStats(&cache.quoteSlice[i])
+
+			return cache.quoteSlice[i], nil
 		}
 	}
 
-	cache.voteSlice[vote.UserID-1] = append(cache.voteSlice[vote.UserID-1], vote)
-
-	return nil
+	// something went wrong, quote doesn't exist (anymore)
+	return QuoteT{}, errors.New(fmt.Sprintf("unsafeAddVoteToCache: quote with QuoteID %d doesn't exist (anymore)", vote.QuoteID)) 
 }
 
 func unsafeOverwriteTeacherInCache(t TeacherT) error {
@@ -536,10 +538,6 @@ func unsafeGetUserFromCache(name string, password string) UserT {
 	return UserT{}
 }
 
-func unsafeGetUsersAmountFromCache() int32 {
-	return int32(len(cache.userSlice))
-}
-
 func unsafeAddUserDataToQuote(q *QuoteT, userid int32) error {
 	if userid < 1 || len(cache.voteSlice) < int(userid) {
 		// u must be greater than zero to be a valid UserID
@@ -549,15 +547,50 @@ func unsafeAddUserDataToQuote(q *QuoteT, userid int32) error {
 
 	for _,vote := range cache.voteSlice[userid-1] {
 		if vote.QuoteID == q.QuoteID {
-			q.MyRating = vote.Rating
+			q.MyVote = vote.Val
 			return nil
 		}
 	}
 
-	q.MyRating = MyRatingNone
+	q.MyVote = VoteNone
 
 	return nil
 }
+
+/* -------------------------------------------------------------------------- */
+/*                              HELPER FUNCTIONS                              */
+/* -------------------------------------------------------------------------- */
+
+func calculateQuoteStats(quote *QuoteT) {
+	// Favourite 
+	num := int32(0)
+	sum := int32(0)
+	for x, i := range quote.Stats.Data {
+		num += i
+		sum += i * (int32(x+1) - VoteDefault)
+	}
+	
+	if num == 0 {
+		quote.Stats.Pop = 0
+		quote.Stats.Con = 0
+		return
+	}
+
+	quote.Stats.Pop = float32(sum) / float32( len(cache.userSlice) ) + VoteDefault
+
+	// Controversial ... ?
+	mean := float32(sum) / float32(num) + VoteDefault
+	div := float32(0)
+	for x, i := range quote.Stats.Data {
+		div += float32(i) * ( ( float32(x+1) - mean ) * ( float32(x+1) - mean ) ) 
+	}
+
+	quote.Stats.Con = div / float32(num)
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                  DEBUGGING                                 */
+/* -------------------------------------------------------------------------- */
 
 // PrintWordsMap is a debugging function
 func PrintWordsMap() {
