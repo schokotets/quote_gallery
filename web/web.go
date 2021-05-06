@@ -13,6 +13,7 @@ func SetupRoutes() {
 
 	rt.HandleFunc("/", anyAuth(pageRoot))
 
+	// TODO cache svgs longer
 	handlerFiles := http.FileServer(http.Dir("./public"))
 	rt.PathPrefix("/static/").Handler(http.StripPrefix("/static/", handlerFiles))
 
