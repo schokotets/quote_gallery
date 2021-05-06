@@ -91,3 +91,4 @@ function checkTeacherSelect(e) {
     customteachercheckbox.removeAttribute("required")
   }
 }
+

@@ -33,25 +33,28 @@
 		{{range .Quotes}}
 		<div class="quote">
 			<!--<span class="id"><i>Zitat #{{.QuoteID}}</i></span>-->
-			{{if .Context}}<span>Situation: {{.Context}}</span>{{end}}
-			<table>
-				<tr>
-					<td style="vertical-align: top;">
-						{{if .Voted}}
-						<img src="/static/heart-red.svg" class="likebutton">
-						{{else}}
-						<img src="/static/heart-gray.svg" class="likebutton">
-						{{end}}
-					</td>
-					<td>
-						<span class="text">„{{.Text}}“</span>
-						<span class="teacher">~ {{with (GetTeacherByID .TeacherID)}}{{.Title}} {{.Name}}{{if .Note}} ({{.Note}}){{end}}{{end}}</span>
-					</td>
-				</tr>
-			</table>
+			{{if .Context}}<span class="context">Situation: {{.Context}}</span>{{end}}
+			<span class="text">„{{.Text}}“</span>
+			<span class="teacher">~ {{with (GetTeacherByID .TeacherID)}}{{.Title}} {{.Name}}{{if .Note}} ({{.Note}}){{end}}{{end}}</span>
+			<div class="rating">
+				<img onclick="voteFor(this, {{.QuoteID}}, 1)" src="/static/1f4a9.svg" class="votebutton {{if eq .MyVote 1}}selected{{end}}">
+				<img onclick="voteFor(this, {{.QuoteID}}, 2)" src="/static/1f641.svg" class="votebutton {{if eq .MyVote 2}}selected{{end}}">
+				<img onclick="voteFor(this, {{.QuoteID}}, 3)" src="/static/1f610.svg" class="votebutton {{if eq .MyVote 3}}selected{{end}}">
+				<img onclick="voteFor(this, {{.QuoteID}}, 4)" src="/static/1f603.svg" class="votebutton {{if eq .MyVote 4}}selected{{end}}">
+				<img onclick="voteFor(this, {{.QuoteID}}, 5)" src="/static/1f602.svg" class="votebutton {{if eq .MyVote 5}}selected{{end}}">
+			</div>
 		</div>
+
 		{{end}}
 	</div>
 	{{template "NAVIGATION" .}}
+
+	<footer>
+		<span>Emoji-Grafiken: <a href="https://github.com/twitter/twemoji">twemoji</a> von <a href="https://twitter.github.io/">TwitterOSS</a>,
+			lizenziert per <a href="http://creativecommons.org/licenses/by/4.0/deed.de">CC-BY 4.0</a></span>
+	</footer>
+
+	<script src="/static/axios.min.js"></script>
+	<script src="/static/quotevote.js"></script>
 </body>
 </html>

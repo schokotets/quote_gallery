@@ -58,6 +58,13 @@ func pageRoot(w http.ResponseWriter, r *http.Request, userID int32, isAdmin bool
 		}
 	}
 
+	err = database.AddUserDataToQuotes(quotes, userID)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, err.Error())
+		return
+	}
+
 	data := struct {
 		Quotes	[]database.QuoteT
 		Prev	int
