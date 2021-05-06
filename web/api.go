@@ -473,14 +473,12 @@ func putAPIQuotesIDVoteRating(w http.ResponseWriter, r *http.Request, u int32) {
 	}
 
 	b, err := json.Marshal(quote.Stats)
-	
+
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "marshalling to json failed")
 		return
 	}
-	
-	w.WriteHeader(http.StatusOK)
+
 	fmt.Fprintf(w, string(b))
-	return
 }
