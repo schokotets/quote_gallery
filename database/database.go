@@ -381,7 +381,7 @@ func CreateQuote(q QuoteT) error {
 	// add quote to cache
 	unsafeAddQuoteToCache(q)
 
-	unsafeGenerateCacheIndex()
+	unsafeForceCacheIndexGen()
 
 	return nil
 }
@@ -440,7 +440,7 @@ func UpdateQuote(q QuoteT) error {
 		go Initialize()
 	}
 
-	unsafeGenerateCacheIndex()
+	unsafeForceCacheIndexGen()
 
 	return nil
 }
@@ -495,7 +495,7 @@ func DeleteQuote(ID int32) error {
 		go Initialize()
 	}
 
-	unsafeGenerateCacheIndex()
+	unsafeForceCacheIndexGen()
 
 	return nil
 }
@@ -1040,7 +1040,10 @@ func AddVote(vote VoteT) (QuoteT, error) {
 	defer globalMutex.MajorUnlock()
 
 	// add vote to cache
-	return unsafeAddVoteToCache(vote)
+	quote, err := unsafeAddVoteToCache(vote)
+
+	requestCacheIndexGen()
+	return quote, err
 }
 
 /* -------------------------------------------------------------------------- */

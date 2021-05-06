@@ -201,6 +201,7 @@ func unsafeLoadCache() error {
 
 	log.Print("Filled cache successfully")
 
+	unsafeForceCacheIndexGen()
 	startAutoCacheIndexing()
 
 	return nil
