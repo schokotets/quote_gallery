@@ -35,13 +35,22 @@ var cacheIndexingMux Mutex = Mutex{unlocked, 0, false}
 var isRequest bool = false
 var t *time.Timer = nil
 
-var indexFunctions = [6]func(quoteSlice []QuoteT, n, from int) {
-	byTimeDesc,	// 0: latest first
-	byTimeAsce, // 1: oldest first
-	byPopDesc,  // 2: most popular first
-	byPopAsce, 	// 3: least popular first
-	byConDesc,	// 4: most controversial first
-	byConAsce,	// 5: least controversial first
+// var indexFunctions = [6]func(quoteSlice []QuoteT, n, from int) {
+// 	byTimeDesc,	// 0: latest first
+// 	byTimeAsce, // 1: oldest first
+// 	byPopDesc,  // 2: most popular first
+// 	byPopAsce, 	// 3: least popular first
+// 	byConDesc,	// 4: most controversial first
+// 	byConAsce,	// 5: least controversial first
+// }
+
+var indexFunctions = map[string]func(quoteSlice []QuoteT, n, from int) {
+	"TimeDesc":	TimeDesc,
+	"TimeAsce":	TimeAsce,
+	"PopDesc":  PopDesc,
+	"PopAsce":  PopAsce,
+	"ConDesc":  ConDesc,
+	"ConAsce":  ConAsce,
 }
 
 /* -------------------------------------------------------------------------- */
@@ -88,9 +97,9 @@ func requestCacheIndexGen() error {
 // n		 number of quotes to get
 // from		 starting index
 // indexType type of indexing, refer to indexFuntions
-func unsafeGetQuotesFromIndexedCache(n, from, indexType int) ([]QuoteT) {
-
-	if indexType < 0 || indexType >= len(indexFunctions) {
+func unsafeGetQuotesFromIndexedCache(n, from int, indexType string) ([]QuoteT) {
+	indexFuntion, ok := indexFunctions[indexType]
+	if !ok {
 		return nil
 	}
 
@@ -107,9 +116,14 @@ func unsafeGetQuotesFromIndexedCache(n, from, indexType int) ([]QuoteT) {
 	}
 	quoteSlice := make([]QuoteT, n)
 
-	indexFunctions[indexType](quoteSlice, n, from)
+	indexFuntion(quoteSlice, n, from)
 
 	return quoteSlice
+}
+
+func isIndexType(indexType string) bool {
+	_, ok := indexFunctions[indexType]
+	return ok
 }
 
 /* -------------------------------------------------------------------------- */
@@ -191,14 +205,14 @@ func handler() {
 /* -------------------------------------------------------------------------- */
 
 // indexType: 0
-func byTimeDesc(quoteSlice []QuoteT, n, from int) {
+func TimeDesc(quoteSlice []QuoteT, n, from int) {
 	for i := 0; i < n; i++ {
 		quoteSlice[i] = cache.quoteSlice[ quoteIndexByTime[from + i] ]
 	}
 }
 
 // indexType: 1
-func byTimeAsce(quoteSlice []QuoteT, n, from int) {
+func TimeAsce(quoteSlice []QuoteT, n, from int) {
 	// calculate real starting index, because of reversed order
 	from = len(quoteIndexByTime) - from - 1
 
@@ -208,14 +222,14 @@ func byTimeAsce(quoteSlice []QuoteT, n, from int) {
 }
 
 // indexType: 2
-func byPopDesc(quoteSlice []QuoteT, n, from int) {
+func PopDesc(quoteSlice []QuoteT, n, from int) {
 	for i := 0; i < n; i++ {
 		quoteSlice[i] = cache.quoteSlice[ quoteIndexByPop[from + i] ]
 	}
 }
 
 // indexType: 3
-func byPopAsce(quoteSlice []QuoteT, n, from int) {
+func PopAsce(quoteSlice []QuoteT, n, from int) {
 	// calculate real starting index, because of reversed order
 	from = len(quoteIndexByTime) - from - 1
 
@@ -225,14 +239,14 @@ func byPopAsce(quoteSlice []QuoteT, n, from int) {
 }
 
 // indexType: 4
-func byConDesc(quoteSlice []QuoteT, n, from int) {
+func ConDesc(quoteSlice []QuoteT, n, from int) {
 	for i := 0; i < n; i++ {
 		quoteSlice[i] = cache.quoteSlice[ quoteIndexByCon[from + i] ]
 	}
 }
 
 // indexType: 5
-func byConAsce(quoteSlice []QuoteT, n, from int) {
+func ConAsce(quoteSlice []QuoteT, n, from int) {
 	// calculate real starting index, because of reversed order
 	from = len(quoteIndexByTime) - from - 1
 

@@ -315,7 +315,7 @@ func GetNQuotesFrom(n, from int) ([]QuoteT, error) {
 	return unsafeGetNQuotesFromFromCache(n, from), nil
 }
 
-func GetNSortedQuotesFrom(n, from, indexType int) ([]QuoteT, error) {
+func GetNSortedQuotesFrom(n, from int, indexType string) ([]QuoteT, error) {
 	if database == nil {
 		return nil, errors.New("GetNSortedQuotesFrom: not connected to database")
 	}
