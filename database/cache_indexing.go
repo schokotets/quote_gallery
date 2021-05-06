@@ -28,9 +28,7 @@ var quoteIndexByCon []uint32
 // quotes are sorted by quote unixtime (QuoteT.Unixtime)
 var quoteIndexByTime []uint32
 
-var cacheIndexingMux SimpleMutex = SimpleMutex{
-	state: unlocked,
-}
+var cacheIndexingMux Mutex = Mutex{unlocked, 0, false}
 
 var isRequest bool = false
 var t *time.Timer = nil
@@ -42,8 +40,8 @@ var t *time.Timer = nil
 
 // Starts cache indexing, should only be called once
 func startAutoCacheIndexing() {
-	cacheIndexingMux.Lock()
-	defer cacheIndexingMux.Unlock()
+	cacheIndexingMux.MajorLock()
+	defer cacheIndexingMux.MajorUnlock()
 
 	if t == nil {
 		t = time.AfterFunc(timing, handler)
@@ -51,8 +49,8 @@ func startAutoCacheIndexing() {
 }
 
 func stopAutoCacheIndexing() {
-	cacheIndexingMux.Lock()
-	defer cacheIndexingMux.Unlock()
+	cacheIndexingMux.MajorLock()
+	defer cacheIndexingMux.MajorUnlock()
 
 	if t != nil {
 		t.Stop()
@@ -64,8 +62,8 @@ func stopAutoCacheIndexing() {
 // this function can allways be called to enforce an immediate CacheIndex generation,
 // whether AutoCacheIndexing is active or not
 func unsafeForceCacheIndexGen() {
-	cacheIndexingMux.Lock()
-	defer cacheIndexingMux.Unlock()
+	cacheIndexingMux.MajorLock()
+	defer cacheIndexingMux.MajorUnlock()
 	generator()
 }
 
@@ -135,8 +133,8 @@ func handler() {
 		globalMutex.MinorLock()
 		defer globalMutex.MinorUnlock()
 
-		cacheIndexingMux.Lock()
-		defer cacheIndexingMux.Unlock()
+		cacheIndexingMux.MajorLock()
+		defer cacheIndexingMux.MajorUnlock()
 
 		generator()
 
@@ -146,8 +144,8 @@ func handler() {
 	} else {
 		// Just restart timer, if AutoCacheIndexing is still active
 
-		cacheIndexingMux.Lock()
-		defer cacheIndexingMux.Unlock()
+		cacheIndexingMux.MajorLock()
+		defer cacheIndexingMux.MajorUnlock()
 
 		if t != nil {
 			t = time.AfterFunc(timing, handler)
