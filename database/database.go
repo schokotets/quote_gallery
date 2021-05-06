@@ -297,22 +297,6 @@ func ExecuteQuery(query string) error {
 /*                          EXPORTED QUOTES FUNCTIONS                         */
 /* -------------------------------------------------------------------------- */
 
-// GetAllQuotes returns a slice containing all quotes.
-// The weight variable will be zero.
-//
-// Possible returned error type: generic
-func GetAllQuotes() ([]QuoteT, error) {
-	if database == nil {
-		return nil, errors.New("GetQuotes: not connected to database")
-	}
-
-	globalMutex.MinorLock()
-	defer globalMutex.MinorUnlock()
-
-	// get quotes from cache
-	return unsafeGetAllQuotesFromCache(), nil
-}
-
 // GetNQuotesFrom returns a slice containing n quotes
 // starting from index from. May return fewer than n quotes.
 // The weight variable will be zero
