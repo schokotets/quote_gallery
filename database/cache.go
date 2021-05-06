@@ -42,7 +42,7 @@ type occurenceSliceT struct {
 //
 // voteSlice doesn't require the UserID-field of VoteT, because the UserID is already
 // used as index of voteSlice. But for the sake of not defining a second vote-struct,
-// the one defined in database.go is used 
+// the one defined in database.go is used
 var cache struct {
 	quoteSlice   []QuoteT
 	teacherSlice []TeacherT
@@ -73,9 +73,9 @@ func unsafeLoadCache() error {
 	/* --------------------------------- QUOTES --------------------------------- */
 
 	// get all quotes from database
-	rows, err := database.Query(`SELECT 
+	rows, err := database.Query(`SELECT
 		QuoteID,
-		TeacherID, 
+		TeacherID,
 		Context,
 		Text,
 		Unixtime FROM quotes`)
@@ -110,9 +110,9 @@ func unsafeLoadCache() error {
 
 	// get all teachers from database
 	rows, err = database.Query(`SELECT
-		TeacherID, 
-		Name, 
-		Title, 
+		TeacherID,
+		Name,
+		Title,
 		Note FROM teachers`)
 
 	if err != nil {
@@ -138,9 +138,9 @@ func unsafeLoadCache() error {
 	/* ---------------------------------- USERS --------------------------------- */
 
 	// get all users from database
-	rows, err = database.Query(`SELECT 
+	rows, err = database.Query(`SELECT
 		UserID,
-		Name, 
+		Name,
 		Password,
 		Admin FROM users`)
 
@@ -170,7 +170,7 @@ func unsafeLoadCache() error {
 	/* ---------------------------------- VOTES --------------------------------- */
 
 	// get all votes from database
-	rows, err = database.Query(`SELECT 
+	rows, err = database.Query(`SELECT
 		UserID,
 		QuoteID,
 		Rating FROM votes`)
@@ -200,6 +200,10 @@ func unsafeLoadCache() error {
 	rows.Close()
 
 	log.Print("Filled cache successfully")
+
+	unsafeForceCacheIndexGen()
+	startAutoCacheIndexing()
+
 	return nil
 }
 
@@ -255,7 +259,7 @@ func unsafeAddVoteToCache(vote VoteT) (QuoteT, error) {
 
 	if vote.Val < VoteMin || vote.Val > VoteMax {
 		return QuoteT{}, errors.New(fmt.Sprintf("unsafeAddVoteToCache: invalid Rating, must be in range %d-%d", VoteMin, VoteMax))
-	} 
+	}
 
 	for len(cache.voteSlice) < int(vote.UserID) {
 		cache.voteSlice = append(cache.voteSlice, []VoteT{})
@@ -271,7 +275,7 @@ func unsafeAddVoteToCache(vote VoteT) (QuoteT, error) {
 					cache.quoteSlice[j].Stats.Data[oldVote.Val-1] -= 1
 					cache.quoteSlice[j].Stats.Data[vote.Val-1] += 1
 					cache.voteSlice[vote.UserID-1][i]=vote
-					
+
 					calculateQuoteStats(&cache.quoteSlice[j])
 
 					return cache.quoteSlice[j], nil
@@ -280,7 +284,7 @@ func unsafeAddVoteToCache(vote VoteT) (QuoteT, error) {
 
 			// something went wrong, quote doesn't exist (anymore)
 			return QuoteT{}, errors.New(fmt.Sprintf("unsafeAddVoteToCache: quote with QuoteID %d doesn't exist (anymore)", vote.QuoteID))
-			
+
 		}
 	}
 
@@ -288,7 +292,7 @@ func unsafeAddVoteToCache(vote VoteT) (QuoteT, error) {
 		if quote.QuoteID == vote.QuoteID {
 			cache.quoteSlice[i].Stats.Data[vote.Val-1] += 1
 			cache.voteSlice[vote.UserID-1] = append(cache.voteSlice[vote.UserID-1], vote)
-			
+
 			calculateQuoteStats(&cache.quoteSlice[i])
 
 			return cache.quoteSlice[i], nil
@@ -296,7 +300,7 @@ func unsafeAddVoteToCache(vote VoteT) (QuoteT, error) {
 	}
 
 	// something went wrong, quote doesn't exist (anymore)
-	return QuoteT{}, errors.New(fmt.Sprintf("unsafeAddVoteToCache: quote with QuoteID %d doesn't exist (anymore)", vote.QuoteID)) 
+	return QuoteT{}, errors.New(fmt.Sprintf("unsafeAddVoteToCache: quote with QuoteID %d doesn't exist (anymore)", vote.QuoteID))
 }
 
 func unsafeOverwriteTeacherInCache(t TeacherT) error {
@@ -562,14 +566,14 @@ func unsafeAddUserDataToQuote(q *QuoteT, userid int32) error {
 /* -------------------------------------------------------------------------- */
 
 func calculateQuoteStats(quote *QuoteT) {
-	// Favourite 
+	// Favourite
 	num := int32(0)
 	sum := int32(0)
 	for x, i := range quote.Stats.Data {
 		num += i
 		sum += i * (int32(x+1) - VoteDefault)
 	}
-	
+
 	if num == 0 {
 		quote.Stats.Pop = 0
 		quote.Stats.Con = 0
@@ -582,7 +586,7 @@ func calculateQuoteStats(quote *QuoteT) {
 	mean := float32(sum) / float32(num) + VoteDefault
 	div := float32(0)
 	for x, i := range quote.Stats.Data {
-		div += float32(i) * ( ( float32(x+1) - mean ) * ( float32(x+1) - mean ) ) 
+		div += float32(i) * ( ( float32(x+1) - mean ) * ( float32(x+1) - mean ) )
 	}
 
 	quote.Stats.Con = div / float32(num)

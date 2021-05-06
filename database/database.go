@@ -35,8 +35,8 @@ const VoteNone = 0
 // Text       the text of the quote itself
 // Unixtime   the time of submission; optional
 //
-// Stats	exists only locally, not saved in database!  \ 
-//    Pop	measure of the quote's popularity			 | 		
+// Stats	exists only locally, not saved in database!  \
+//    Pop	measure of the quote's popularity			 |
 //    Con	measure of the quote's controversy			 | Created from
 //    Data	array of the vote distribution				 | votes table
 // MyVote	exists only locally, not saved in database!  |
@@ -50,17 +50,17 @@ type QuoteT struct {
 	Context   string
 	Text      string
 	Unixtime  int64
-	
+
 	Stats struct {
 		Pop float32
 		Con float32
 		Data [VoteMax - VoteMin + 1]int32
 	}
-	
+
 	// user / request specific
 	MyVote int8
 	Match  float32
-	
+
 }
 
 // UnverifiedQuoteT stores one unverified quote
@@ -97,7 +97,7 @@ type TeacherT struct {
 // UserID    the unique identifier of the user
 // Name      the user's name
 // Password  the user's password
-// Admin     flag if the user has admin priviliges 
+// Admin     flag if the user has admin priviliges
 type UserT struct {
 	UserID   int32
 	Name     string
@@ -150,9 +150,9 @@ func Connect() error {
 
 	database, err = sql.Open(
 		"postgres",
-		`user=postgres 
-		password=1234 
-		dbname=quote_gallery 
+		`user=postgres
+		password=1234
+		dbname=quote_gallery
 		sslmode=disable`)
 	if err != nil {
 		return DBError{ "Connect: connecting to database failed", err }
@@ -187,9 +187,9 @@ func Initialize() error {
 	// for more information see TeachersT declaration
 	_, err = database.Exec(
 		`CREATE TABLE IF NOT EXISTS teachers (
-		TeacherID serial PRIMARY KEY, 
-		Name varchar, 
-		Title varchar, 
+		TeacherID serial PRIMARY KEY,
+		Name varchar,
+		Title varchar,
 		Note varchar)`)
 	if err != nil {
 		database.Close()
@@ -201,7 +201,7 @@ func Initialize() error {
 	_, err = database.Exec(
 		`CREATE TABLE IF NOT EXISTS quotes (
 		QuoteID serial PRIMARY KEY,
-		TeacherID integer REFERENCES teachers (TeacherID) ON DELETE CASCADE, 
+		TeacherID integer REFERENCES teachers (TeacherID) ON DELETE CASCADE,
 		Context varchar,
 		Text varchar,
 		Unixtime bigint)`)
@@ -229,8 +229,8 @@ func Initialize() error {
 		`CREATE TABLE IF NOT EXISTS unverifiedQuotes (
 		UserID integer REFERENCES users (UserID) ON DELETE CASCADE,
 		QuoteID serial PRIMARY KEY,
-		TeacherID integer REFERENCES teachers (TeacherID) ON DELETE CASCADE, 
-		TeacherName varchar, 
+		TeacherID integer REFERENCES teachers (TeacherID) ON DELETE CASCADE,
+		TeacherName varchar,
 		Context varchar,
 		Text varchar,
 		Unixtime bigint)`)
@@ -385,6 +385,8 @@ func CreateQuote(q QuoteT) error {
 	// add quote to cache
 	unsafeAddQuoteToCache(q)
 
+	unsafeForceCacheIndexGen()
+
 	return nil
 }
 
@@ -442,6 +444,8 @@ func UpdateQuote(q QuoteT) error {
 		go Initialize()
 	}
 
+	unsafeForceCacheIndexGen()
+
 	return nil
 }
 
@@ -494,6 +498,8 @@ func DeleteQuote(ID int32) error {
 		log.Print("DATABASE: Cache is out of sync with database, trying to reload")
 		go Initialize()
 	}
+
+	unsafeForceCacheIndexGen()
 
 	return nil
 }
@@ -706,8 +712,8 @@ func GetUnverifiedQuotes() ([]UnverifiedQuoteT, error) {
 	rows, err := database.Query(`SELECT
 		UserID,
 		QuoteID,
-		TeacherID, 
-		TeacherName, 
+		TeacherID,
+		TeacherName,
 		Context,
 		Text,
 		Unixtime FROM unverifiedQuotes`)
@@ -762,8 +768,8 @@ func GetUnverifiedQuoteByID(ID int32) (UnverifiedQuoteT, error) {
 	// Query database
 	rows, err := database.Query(`SELECT
 		UserID,
-		TeacherID, 
-		TeacherName, 
+		TeacherID,
+		TeacherName,
 		Context,
 		Text,
 		Unixtime FROM unverifiedQuotes WHERE QuoteID=$1`, ID)
@@ -928,7 +934,7 @@ func DeleteUnverifiedQuote(ID int32) error {
 func IsUser(name string, password string) int32 {
 	globalMutex.MinorLock()
 	defer globalMutex.MinorUnlock()
-	
+
 	return unsafeGetUserFromCache(name, password).UserID
 }
 
@@ -1012,7 +1018,7 @@ func AddVote(vote VoteT) (QuoteT, error) {
 		// u must be greater than zero to be a valid UserID
 		return QuoteT{}, errors.New("AddVote: invalid UserID, must be greater than zero")
 	}
-	
+
 	if vote.Val < 1 || vote.Val > 5 {
 		return QuoteT{}, fmt.Errorf("AddVote: invalid Rating, must be in range %d-%d", VoteMin, VoteMax)
 	}
@@ -1026,11 +1032,11 @@ func AddVote(vote VoteT) (QuoteT, error) {
 
 	// add vote to database, update if necessary
 	_, err = database.Exec(
-		`INSERT INTO votes (Hash, UserID, QuoteID, Rating) VALUES ($1, $2, $3, $4) 
+		`INSERT INTO votes (Hash, UserID, QuoteID, Rating) VALUES ($1, $2, $3, $4)
 		 ON CONFLICT (Hash) DO UPDATE SET
 			UserID=EXCLUDED.UserID, QuoteID=EXCLUDED.QuoteID, Rating=EXCLUDED.Rating;`,
 		voteHash(vote), vote.UserID, vote.QuoteID, vote.Val)
-	
+
 	if err != nil {
 		if strings.Contains(err.Error(), "violates foreign key constraint \"votes_quoteid_fkey\"") {
 			return QuoteT{}, InvalidQuoteIDError{ "AddVoteIDError: QuoteID unknown" }
@@ -1042,7 +1048,10 @@ func AddVote(vote VoteT) (QuoteT, error) {
 	defer globalMutex.MajorUnlock()
 
 	// add vote to cache
-	return unsafeAddVoteToCache(vote) 
+	quote, err := unsafeAddVoteToCache(vote)
+
+	requestCacheIndexGen()
+	return quote, err
 }
 
 /* -------------------------------------------------------------------------- */
