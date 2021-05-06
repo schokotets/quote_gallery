@@ -300,6 +300,9 @@ func ExecuteQuery(query string) error {
 // GetNQuotesFrom returns a slice containing n quotes
 // starting from index from. May return fewer than n quotes.
 // The weight variable will be zero
+//
+// THIS FUNCTION IS OUTDATED
+//
 func GetNQuotesFrom(n, from int) ([]QuoteT, error) {
 	if database == nil {
 		return nil, errors.New("GetQuotes: not connected to database")
@@ -310,6 +313,17 @@ func GetNQuotesFrom(n, from int) ([]QuoteT, error) {
 
 	// get quotes from cache
 	return unsafeGetNQuotesFromFromCache(n, from), nil
+}
+
+func GetNSortedQuotesFrom(n, from, sort int) ([]QuoteT, error) {
+	if database == nil {
+		return nil, errors.New("GetNSortedQuotesFrom: not connected to database")
+	}
+
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
+
+	return unsafeGetQuotesFromIndexedCache(n, from, sort), nil
 }
 
 // GetQuotesAmount returns how many quotes there are
