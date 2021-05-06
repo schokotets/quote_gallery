@@ -315,7 +315,7 @@ func GetNQuotesFrom(n, from int) ([]QuoteT, error) {
 	return unsafeGetNQuotesFromFromCache(n, from), nil
 }
 
-func GetNSortedQuotesFrom(n, from, sort int) ([]QuoteT, error) {
+func GetNSortedQuotesFrom(n, from, indexType int) ([]QuoteT, error) {
 	if database == nil {
 		return nil, errors.New("GetNSortedQuotesFrom: not connected to database")
 	}
@@ -323,7 +323,7 @@ func GetNSortedQuotesFrom(n, from, sort int) ([]QuoteT, error) {
 	globalMutex.MinorLock()
 	defer globalMutex.MinorUnlock()
 
-	return unsafeGetQuotesFromIndexedCache(n, from, sort), nil
+	return unsafeGetQuotesFromIndexedCache(n, from, indexType), nil
 }
 
 // GetQuotesAmount returns how many quotes there are
