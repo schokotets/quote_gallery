@@ -15,9 +15,13 @@ import (
 /*                                  CONSTANTS                                 */
 /* -------------------------------------------------------------------------- */
 
+// VoteDefault specifies the rating that's assumed as initial
 const VoteDefault = 3
+// VoteMax specifies the rating that's the best possible
 const VoteMax = 5
+// VoteMin specifies the rating that's the worst possible
 const VoteMin = 1
+// VoteNone specifies the rating that represents that no rating was given
 const VoteNone = 0
 
 /* -------------------------------------------------------------------------- */
@@ -983,10 +987,10 @@ func GetUsernameByID(userid int32) (string, error) {
 // AddUserDataToQuotes adds all the user specific information to the quotes
 func AddUserDataToQuotes(quotes []QuoteT, userid int32) error {
 	if userid < 1 {
-		// u must be greater than zero to be a valid UserID
-		return errors.New("AddUserDataToQuote: invalid UserID, must be greater than zero")
+		// userid must be greater than zero to be a valid UserID
+		return errors.New("AddUserDataToQuotes: invalid UserID, must be greater than zero")
 	}
-	
+
 	globalMutex.MinorLock()
 	defer globalMutex.MinorUnlock()
 
@@ -1002,6 +1006,7 @@ func AddUserDataToQuotes(quotes []QuoteT, userid int32) error {
 /* -------------------------------------------------------------------------- */
 
 // AddVote adds a vote with Rating (1-5) from one user for one quote to the database
+// Possible returned error types: generic / DBError
 func AddVote(vote VoteT) (QuoteT, error) {
 	if vote.UserID < 1 {
 		// u must be greater than zero to be a valid UserID
@@ -1009,7 +1014,7 @@ func AddVote(vote VoteT) (QuoteT, error) {
 	}
 	
 	if vote.Val < 1 || vote.Val > 5 {
-		return QuoteT{}, errors.New(fmt.Sprintf("AddVote: invalid Rating, must be in range %d-%d", VoteMin, VoteMax))
+		return QuoteT{}, fmt.Errorf("AddVote: invalid Rating, must be in range %d-%d", VoteMin, VoteMax)
 	}
 
 	// Verify connection to database
@@ -1023,7 +1028,7 @@ func AddVote(vote VoteT) (QuoteT, error) {
 	_, err = database.Exec(
 		`INSERT INTO votes (Hash, UserID, QuoteID, Rating) VALUES ($1, $2, $3, $4) 
 		 ON CONFLICT (Hash) DO UPDATE SET
-		 	UserID=EXCLUDED.UserID, QuoteID=EXCLUDED.QuoteID, Rating=EXCLUDED.Rating;`, 
+			UserID=EXCLUDED.UserID, QuoteID=EXCLUDED.QuoteID, Rating=EXCLUDED.Rating;`,
 		voteHash(vote), vote.UserID, vote.QuoteID, vote.Val)
 	
 	if err != nil {
