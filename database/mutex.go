@@ -5,10 +5,18 @@ import (
 	"sync/atomic"
 )
 
+/* -------------------------------------------------------------------------- */
+/*                                  CONSTANT                                  */
+/* -------------------------------------------------------------------------- */
+
 const (
 	unlocked uint32 = 0
 	locked   uint32 = 1
 )
+
+/* -------------------------------------------------------------------------- */
+/*                                 DEFINITIONS                                */
+/* -------------------------------------------------------------------------- */
 
 // Mutex struct
 type Mutex struct {
@@ -16,6 +24,15 @@ type Mutex struct {
 	minorThreadsCount uint32
 	isMajor           bool
 }
+
+// SimpleMutex struct
+type SimpleMutex struct {
+	state uint32
+}
+
+/* -------------------------------------------------------------------------- */
+/*                               MUTEX FUNCTIONS                              */
+/* -------------------------------------------------------------------------- */
 
 // Setup will initialize the Mutex struct to default values
 func (m *Mutex) Setup() {
@@ -97,4 +114,18 @@ func (m *Mutex) MajorUnlock() {
 	m.isMajor = false
 
 	atomic.StoreUint32(&m.state, unlocked)
+}
+
+/* -------------------------------------------------------------------------- */
+/*                            SIMPLEMUTEX FUNCTIONS                           */
+/* -------------------------------------------------------------------------- */
+
+func (m *SimpleMutex) Lock() {
+	for !atomic.CompareAndSwapUint32(&m.state, unlocked, locked) {
+		runtime.Gosched()
+	}
+}
+
+func (m *SimpleMutex) Unlock() {
+	atomic.CompareAndSwapUint32(&m.state, locked, unlocked)
 }
