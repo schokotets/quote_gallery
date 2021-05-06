@@ -1006,7 +1006,7 @@ func AddUserDataToQuotes(quotes []QuoteT, userid int32) error {
 /* -------------------------------------------------------------------------- */
 
 // AddVote adds a vote with Rating (1-5) from one user for one quote to the database
-// Possible returned error types: generic / DBError
+// Possible returned error types: generic / DBError / InvalidQuoteIDError
 func AddVote(vote VoteT) (QuoteT, error) {
 	if vote.UserID < 1 {
 		// u must be greater than zero to be a valid UserID
@@ -1032,6 +1032,9 @@ func AddVote(vote VoteT) (QuoteT, error) {
 		voteHash(vote), vote.UserID, vote.QuoteID, vote.Val)
 	
 	if err != nil {
+		if strings.Contains(err.Error(), "violates foreign key constraint \"votes_quoteid_fkey\"") {
+			return QuoteT{}, InvalidQuoteIDError{ "AddVoteIDError: QuoteID unknown" }
+		}
 		return QuoteT{}, DBError{ "AddVote: inserting vote into database failed", err }
 	}
 

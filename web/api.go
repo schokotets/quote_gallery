@@ -467,8 +467,15 @@ func putAPIQuotesIDVoteRating(w http.ResponseWriter, r *http.Request, u int32) {
 	})
 
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, err.Error())
+		switch err.(type) {
+		case database.InvalidQuoteIDError:
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, "unknown QuoteID: %d", quoteid)
+		default:
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, err.Error())
+			log.Printf("/api/quotes/:id/vote/:val: vote casting failed with error '%s' for request body '%s' and QuoteID %d and rating value %d", err.Error(), quoteid, val)
+		}
 		return
 	}
 
