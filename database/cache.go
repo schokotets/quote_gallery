@@ -258,7 +258,7 @@ func unsafeAddVoteToCache(vote VoteT) (QuoteT, error) {
 	}
 
 	if vote.Val < VoteMin || vote.Val > VoteMax {
-		return QuoteT{}, errors.New(fmt.Sprintf("unsafeAddVoteToCache: invalid Rating, must be in range %d-%d", VoteMin, VoteMax))
+		return QuoteT{}, fmt.Errorf("unsafeAddVoteToCache: invalid Rating, must be in range %d-%d", VoteMin, VoteMax)
 	}
 
 	for len(cache.voteSlice) < int(vote.UserID) {
@@ -272,9 +272,9 @@ func unsafeAddVoteToCache(vote VoteT) (QuoteT, error) {
 
 			for j, quote := range cache.quoteSlice {
 				if quote.QuoteID == vote.QuoteID {
-					cache.quoteSlice[j].Stats.Data[oldVote.Val-1] -= 1
-					cache.quoteSlice[j].Stats.Data[vote.Val-1] += 1
-					cache.voteSlice[vote.UserID-1][i]=vote
+					cache.quoteSlice[j].Stats.Data[oldVote.Val-1]--
+					cache.quoteSlice[j].Stats.Data[vote.Val-1]++
+					cache.voteSlice[vote.UserID-1][i] = vote
 
 					calculateQuoteStats(&cache.quoteSlice[j])
 
@@ -283,14 +283,14 @@ func unsafeAddVoteToCache(vote VoteT) (QuoteT, error) {
 			}
 
 			// something went wrong, quote doesn't exist (anymore)
-			return QuoteT{}, errors.New(fmt.Sprintf("unsafeAddVoteToCache: quote with QuoteID %d doesn't exist (anymore)", vote.QuoteID))
+			return QuoteT{}, fmt.Errorf("unsafeAddVoteToCache: quote with QuoteID %d doesn't exist (anymore)", vote.QuoteID)
 
 		}
 	}
 
 	for i, quote := range cache.quoteSlice {
 		if quote.QuoteID == vote.QuoteID {
-			cache.quoteSlice[i].Stats.Data[vote.Val-1] += 1
+			cache.quoteSlice[i].Stats.Data[vote.Val-1]++
 			cache.voteSlice[vote.UserID-1] = append(cache.voteSlice[vote.UserID-1], vote)
 
 			calculateQuoteStats(&cache.quoteSlice[i])
@@ -300,7 +300,7 @@ func unsafeAddVoteToCache(vote VoteT) (QuoteT, error) {
 	}
 
 	// something went wrong, quote doesn't exist (anymore)
-	return QuoteT{}, errors.New(fmt.Sprintf("unsafeAddVoteToCache: quote with QuoteID %d doesn't exist (anymore)", vote.QuoteID))
+	return QuoteT{}, fmt.Errorf("unsafeAddVoteToCache: quote with QuoteID %d doesn't exist (anymore)", vote.QuoteID)
 }
 
 func unsafeOverwriteTeacherInCache(t TeacherT) error {
@@ -569,9 +569,9 @@ func calculateQuoteStats(quote *QuoteT) {
 	// Favourite
 	num := int32(0)
 	sum := int32(0)
-	for x, i := range quote.Stats.Data {
-		num += i
-		sum += i * (int32(x+1) - VoteDefault)
+	for rating, amount := range quote.Stats.Data {
+		num += amount
+		sum += amount * (int32(rating+1) - VoteDefault)
 	}
 
 	if num == 0 {
@@ -585,8 +585,8 @@ func calculateQuoteStats(quote *QuoteT) {
 	// Controversial ... ?
 	mean := float32(sum) / float32(num) + VoteDefault
 	div := float32(0)
-	for x, i := range quote.Stats.Data {
-		div += float32(i) * ( ( float32(x+1) - mean ) * ( float32(x+1) - mean ) )
+	for rating, amount := range quote.Stats.Data {
+		div += float32(amount) * ( ( float32(rating+1) - mean ) * ( float32(rating+1) - mean ) )
 	}
 
 	quote.Stats.Con = div / float32(num)

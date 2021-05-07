@@ -32,7 +32,7 @@ var quoteIndexByTime []uint32
 
 var cacheIndexingMux Mutex = Mutex{unlocked, 0, false}
 
-var isRequest bool = false
+var refreshNecessary bool = false
 var t *time.Timer = nil
 
 // var indexFunctions = [6]func(quoteSlice []QuoteT, n, from int) {
@@ -77,19 +77,19 @@ func stopAutoCacheIndexing() {
 	}
 }
 
-// unsafeForceCacheIndexGen is unsafe because it reads from cache without checking cache mutex
-// this function can allways be called to enforce an immediate CacheIndex generation,
+// unsafeForceCacheIndexGen is unsafe because it reads from cache without checking the global cache mutex
+// this function can always be called to enforce an immediate CacheIndex generation,
 // whether AutoCacheIndexing is active or not
 func unsafeForceCacheIndexGen() {
 	cacheIndexingMux.MajorLock()
 	defer cacheIndexingMux.MajorUnlock()
-	generator()
+	generateIndexes()
 }
 
 // requestCacheIndexGen is thread save
 // The request will be processed with the next run of AutoCacheIndexing
 func requestCacheIndexGen() error {
-	isRequest = true
+	refreshNecessary = true
 	return nil
 }
 
@@ -116,14 +116,9 @@ func unsafeGetQuotesFromIndexedCache(n, from int, indexType string) ([]QuoteT) {
 	}
 	quoteSlice := make([]QuoteT, n)
 
-	indexFuntion(quoteSlice, n, from)
+	indexFn(quoteSlice, n, from)
 
 	return quoteSlice
-}
-
-func isIndexType(indexType string) bool {
-	_, ok := indexFunctions[indexType]
-	return ok
 }
 
 /* -------------------------------------------------------------------------- */
@@ -131,7 +126,7 @@ func isIndexType(indexType string) bool {
 /* -------------------------------------------------------------------------- */
 
 // Never call this function manually, the cache may get messed up
-func generator() {
+func generateIndexes() {
 	diff := (len(cache.quoteSlice) - len(quoteIndexByTime))
 	if diff > 0 {
 		quoteIndexByTime = append(quoteIndexByTime, make([]uint32, diff)...)
@@ -171,11 +166,11 @@ func generator() {
 
 // Never call this funtion manually, this may lead to a deadlock
 func handler() {
-	if isRequest {
-		// execute generator
+	if refreshNecessary {
+		// execute generateIndexes
 		// restart timer, if AutoCacheIndexing is still active
 
-		isRequest = false
+		refreshNecessary = false
 
 		globalMutex.MinorLock()
 		defer globalMutex.MinorUnlock()
@@ -183,7 +178,7 @@ func handler() {
 		cacheIndexingMux.MajorLock()
 		defer cacheIndexingMux.MajorUnlock()
 
-		generator()
+		generateIndexes()
 
 		if t != nil {
 			t = time.AfterFunc(timing, handler)
