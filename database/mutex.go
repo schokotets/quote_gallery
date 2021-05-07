@@ -5,10 +5,18 @@ import (
 	"sync/atomic"
 )
 
+/* -------------------------------------------------------------------------- */
+/*                                  CONSTANT                                  */
+/* -------------------------------------------------------------------------- */
+
 const (
 	unlocked uint32 = 0
 	locked   uint32 = 1
 )
+
+/* -------------------------------------------------------------------------- */
+/*                                 DEFINITIONS                                */
+/* -------------------------------------------------------------------------- */
 
 // Mutex struct
 type Mutex struct {
@@ -17,12 +25,9 @@ type Mutex struct {
 	isMajor           bool
 }
 
-// Setup will initialize the Mutex struct to default values
-func (m *Mutex) Setup() {
-	m.state = unlocked
-	m.minorThreadsCount = 0
-	m.isMajor = false
-}
+/* -------------------------------------------------------------------------- */
+/*                               MUTEX FUNCTIONS                              */
+/* -------------------------------------------------------------------------- */
 
 // MinorLock only blocks if MajorLock is active or imminent
 // several MinorLocks can exist in parallel

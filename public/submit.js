@@ -71,32 +71,9 @@ function processForm(e) {
         return Promise.reject({ response: res });
       }
     })
-    .catch(function (err) {
-      if ("response" in err) {
-        // if the error is axios-generated
-        alert("Fehler beim Einsenden!\n" + axiosErrorString(err.response));
-      } else {
-        alert("Fehler beim Einsenden!\n" + err.message);
-      }
-      console.error(err);
-    });
+    .catch(axiosErrorHandler.bind(this, "Zitat-Einsenden"));
 
   return true;
-}
-
-function axiosErrorString(response) {
-  if (!response) {
-    return "Keine Antwort erhalten";
-  }
-
-  let errorstr = "";
-  if (response.status) {
-    errorstr = "Status: " + response.status;
-  }
-  if (response.data) {
-    errorstr += "\nAntwort: " + response.data;
-  }
-  return errorstr;
 }
 
 teacherselect.addEventListener("change", checkTeacherSelect);
@@ -190,3 +167,4 @@ function fetchSimilarQuotes() {
       }
     });
 }
+

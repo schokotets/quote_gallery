@@ -10,7 +10,12 @@
 	<h1>Adminbereich</h1>
 	<a class="boxbutton" href="/">Zur Startseite</a>
 	<h2>Unbestätigte Zitate</h2>
-	<table class="fullwidth">
+	{{if .ShowUsers}}
+	<a class="boxbutton" href="?">User ausblenden</a>
+	{{else}}
+	<a class="boxbutton" href="?showusers">User anzeigen</a>
+	{{end}}
+	<table class="table fullwidth">
 		<thead>
 			<tr>
 				<th>ID</th>
@@ -18,6 +23,9 @@
 				<th>Context</th>
 				<th>Text</th>
 				<th>Unixtime</th>
+				{{if .ShowUsers}}
+				<th>User</th>
+				{{end}}
 				<th>Actions</th>
 			</tr>
 		</thead>
@@ -46,6 +54,11 @@
 				<td>{{.Context}}</td>
 				<td>{{.Text}}</td>
 				<td>{{FormatUnixtime .Unixtime}}</td>
+
+				{{if $.ShowUsers}}
+				<td>{{GetUsernameByID .UserID}}</td>
+				{{end}}
+
 				<td>
 					<a href="javascript:http('delete','/api/unverifiedquotes/{{.QuoteID}}')">delete</a>
 					&nbsp;
@@ -63,7 +76,7 @@
 
 	<h2>Lehrer</h2>
 	<a href="/admin/teachers/add">add</a>
-	<table>
+	<table class="table">
 		<thead>
 			<tr>
 				<th>ID</th>

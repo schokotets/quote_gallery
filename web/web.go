@@ -13,6 +13,7 @@ func SetupRoutes() {
 
 	rt.HandleFunc("/", anyAuth(pageRoot))
 
+	// TODO cache svgs longer
 	handlerFiles := http.FileServer(http.Dir("./public"))
 	rt.PathPrefix("/static/").Handler(http.StripPrefix("/static/", handlerFiles))
 
@@ -28,6 +29,7 @@ func SetupRoutes() {
 
 	// /api/quotes
 	rt.HandleFunc("/api/quotes/submit", userAuth(postAPIQuotesSubmit) ).Methods("POST")
+	rt.HandleFunc("/api/quotes/{id:[0-9]+}/vote/{val:[1-5]}", userAuth(putAPIQuotesIDVoteRating) ).Methods("PUT")
 
 	// /api/unverifiedquotes
 	rt.HandleFunc("/api/unverifiedquotes/{id:[0-9]+}", adminAuth(putAPIUnverifiedQuotesID) ).Methods("PUT")

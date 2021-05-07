@@ -77,6 +77,8 @@ func postAPIQuotesSubmit(w http.ResponseWriter, r *http.Request, u int32) {
 	quote.Context = subm.Context
 	quote.Text = subm.Text
 
+	quote.UserID = u
+
 	// Add further information to UnverifiedQuote
 	quote.Unixtime = int64(time.Now().Unix())
 
@@ -99,7 +101,7 @@ func postAPIQuotesSubmit(w http.ResponseWriter, r *http.Request, u int32) {
 func putAPIUnverifiedQuotesID(w http.ResponseWriter, r *http.Request, u int32) {
 	id, err := strconv.Atoi(mux.Vars(r)["id"])
 	if err != nil {
-		// This should not happend, because handlerAPIUnverifiedQuotes is only called if
+		// This should not happend, because this handler is only called if
 		// uri pattern is matched, see web.go
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "cannot convert in-url id to int")
@@ -177,7 +179,7 @@ func putAPIUnverifiedQuotesID(w http.ResponseWriter, r *http.Request, u int32) {
 func deleteAPIUnverifiedQuotesID(w http.ResponseWriter, r *http.Request, u int32) {
 	id, err := strconv.Atoi(mux.Vars(r)["id"])
 	if err != nil {
-		// This should not happend, because handlerAPIUnverifiedQuotes is only called if
+		// This should not happend, because this handler is only called if
 		// uri pattern is matched, see web.go
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "cannot convert in-url id to int")
@@ -208,7 +210,7 @@ func deleteAPIUnverifiedQuotesID(w http.ResponseWriter, r *http.Request, u int32
 func putAPIUnverifiedQuotesIDConfirm(w http.ResponseWriter, r *http.Request, u int32) {
 	id, err := strconv.Atoi(mux.Vars(r)["id"])
 	if err != nil {
-		// This should not happend, because handlerAPIUnverifiedQuotes is only called if
+		// This should not happend, because this handler is only called if
 		// uri pattern is matched, see web.go
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "cannot convert in-url id to int")
@@ -380,7 +382,7 @@ func postAPITeachers(w http.ResponseWriter, r *http.Request, u int32) {
 func putAPITeachersID(w http.ResponseWriter, r *http.Request, u int32) {
 	id, err := strconv.Atoi(mux.Vars(r)["id"])
 	if err != nil {
-		// This should not happend, because handlerAPIUnverifiedQuotes is only called if
+		// This should not happend, because this handler is only called if
 		// uri pattern is matched, see web.go
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "cannot convert in-url id to int")
@@ -431,4 +433,59 @@ func putAPITeachersID(w http.ResponseWriter, r *http.Request, u int32) {
 		log.Printf("/api/teachers: updating teacher failed with error '%s' for request body '%s' and TeacherT %v", err.Error(), bytes, teacher)
 		return
 	}
+}
+
+func putAPIQuotesIDVoteRating(w http.ResponseWriter, r *http.Request, u int32) {
+	quoteid, err := strconv.Atoi(mux.Vars(r)["id"])
+	if err != nil {
+		// This should not happend, because this handler is only called if
+		// uri pattern is matched, see web.go
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "cannot convert in-url id to int")
+		return
+	}
+
+	if quoteid == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "invalid QuoteID: 0")
+		return
+	}
+
+	val, err := strconv.Atoi(mux.Vars(r)["val"])
+	if err != nil {
+		// This should not happend, because this handler is only called if
+		// uri pattern is matched, see web.go
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "cannot convert in-url vote val to int")
+		return
+	}
+
+	quote, err := database.AddVote(database.VoteT{
+		QuoteID: int32(quoteid),
+		UserID: u,
+		Val: int8(val),
+	})
+
+	if err != nil {
+		switch err.(type) {
+		case database.InvalidQuoteIDError:
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, "unknown QuoteID: %d", quoteid)
+		default:
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, err.Error())
+			log.Printf("/api/quotes/:id/vote/:val: vote casting failed with error '%s' for QuoteID %d and rating value %d", err.Error(), quoteid, val)
+		}
+		return
+	}
+
+	b, err := json.Marshal(quote.Stats)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "marshalling to json failed")
+		return
+	}
+
+	fmt.Fprintf(w, string(b))
 }

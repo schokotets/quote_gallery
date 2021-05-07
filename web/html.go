@@ -18,7 +18,7 @@ import (
 
 const quotesPerPage = 15
 
-func pageRoot(w http.ResponseWriter, r *http.Request, isAdmin bool) {
+func pageRoot(w http.ResponseWriter, r *http.Request, userID int32, isAdmin bool) {
 	if r.URL.Path != "/" {
 		w.WriteHeader(404)
 		fmt.Fprint(w, "404 Not Found")
@@ -45,18 +45,42 @@ func pageRoot(w http.ResponseWriter, r *http.Request, isAdmin bool) {
 		nextPage = -1
 	}
 
-	quotes, err := database.GetNQuotesFrom(quotesPerPage, currentPage*quotesPerPage)
+	var indexHandler *database.IndexHandler
+	var indexHandlerKey string
+	if sortQuery, ok := r.URL.Query()["sorting"]; ok {
+		sorting := sortQuery[0]
+		if ih, ok := database.IndexHandlers[sorting]; ok {
+			indexHandler = &ih
+			indexHandlerKey = sorting
+		}
+	}
+
+	if indexHandler == nil {
+		indexHandlerKey = database.DefaultIndexHandlerName
+		ih, _ := database.IndexHandlers[indexHandlerKey]
+		indexHandler = &ih
+	}
+
+
+	quotes, err := database.GetNSortedQuotesFrom(quotesPerPage, currentPage*quotesPerPage, indexHandler.Function)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	if quotes == nil {
-		quotes, err = database.GetNQuotesFrom(quotesPerPage, 0)
+		quotes, err = database.GetNSortedQuotesFrom(quotesPerPage, 0, indexHandler.Function)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+	}
+
+	err = database.AddUserDataToQuotes(quotes, userID)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, err.Error())
+		return
 	}
 
 	data := struct {
@@ -66,10 +90,14 @@ func pageRoot(w http.ResponseWriter, r *http.Request, isAdmin bool) {
 		Next	int
 		Last	int
 		IsAdmin bool
-	}{quotes, previousPage, currentPage, nextPage, lastPage, isAdmin}
+		SortingOrder [6]string
+		SortingMap map[string]database.IndexHandler
+		CurrentSorting string
+	}{quotes, previousPage, currentPage, nextPage, lastPage, isAdmin, database.IndexHandlerOrder, database.IndexHandlers, indexHandlerKey}
 
 	tmpl := template.Must(template.New("quotes.html").Funcs(template.FuncMap{
 		"inc": func (i int) int { return i+1 },
+		"div": func (a, b int32) string { return fmt.Sprintf("%.3f", float32(a)/float32(b)) },
 		"GetTeacherByID": database.GetTeacherByID,
 	}).ParseFiles("pages/quotes.html"))
 	tmpl.Execute(w, data)
@@ -93,16 +121,21 @@ func pageAdmin(w http.ResponseWriter, r *http.Request, u int32) {
 	sort.Slice(quotes, func(i, j int) bool { return quotes[i].Unixtime < quotes[j].Unixtime })
 	sort.Slice(teachers, func(i, j int) bool { return teachers[i].TeacherID < teachers[j].TeacherID })
 
+	_, showusers := r.URL.Query()["showusers"]
+
 	pagedata := struct {
 		Quotes []database.UnverifiedQuoteT
 		Teachers []database.TeacherT
+		ShowUsers bool
 	} {
 		quotes,
 		teachers,
+		showusers,
 	}
 
 	tmpl := template.Must(template.New("admin.html").Funcs(template.FuncMap{
 		"GetTeacherByID": database.GetTeacherByID,
+		"GetUsernameByID": database.GetUsernameByID,
 		"FormatUnixtime": func(utime int64) string {
 			return time.Unix(utime, 0).Format("2.1.2006 15:04")
 		},

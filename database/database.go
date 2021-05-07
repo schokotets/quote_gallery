@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
 	"sort"
 	"strings"
@@ -11,6 +12,19 @@ import (
 	// loading postgresql driver
 	_ "github.com/lib/pq"
 )
+
+/* -------------------------------------------------------------------------- */
+/*                                  CONSTANTS                                 */
+/* -------------------------------------------------------------------------- */
+
+// VoteDefault specifies the rating that's assumed as initial
+const VoteDefault = 3
+// VoteMax specifies the rating that's the best possible
+const VoteMax = 5
+// VoteMin specifies the rating that's the worst possible
+const VoteMin = 1
+// VoteNone specifies the rating that represents that no rating was given
+const VoteNone = 0
 
 /* -------------------------------------------------------------------------- */
 /*                                 DEFINITIONS                                */
@@ -22,21 +36,38 @@ import (
 // Context    the context of the quote
 // Text       the text of the quote itself
 // Unixtime   the time of submission; optional
-// Upvotes    optional
 //
-// Match      exists only locally, not saved in database!
-//              (used by GetQuotesByString to quantify how well this quote fits the search)
+// Stats	exists only locally, not saved in database!  \
+//    Pop	measure of the quote's popularity			 |
+//    Con	measure of the quote's controversy			 | Created from
+//    Data	array of the vote distribution				 | votes table
+// MyVote	exists only locally, not saved in database!  |
+// 			(used by AddUserDataToQuotes)				 /
+//
+// Match	exists only locally, not saved in database!
+// 			(used by GetQuotesFromString to quantify how well this quote fits the string)
 type QuoteT struct {
 	QuoteID   int32
 	TeacherID int32
 	Context   string
 	Text      string
 	Unixtime  int64
-	Upvotes   int32
-	Match     float32
+
+	Stats struct {
+		Num int32
+		Pop float32
+		Con float32
+		Data [VoteMax - VoteMin + 1]int32
+	}
+
+	// user / request specific
+	MyVote int8
+	Match  float32
+
 }
 
 // UnverifiedQuoteT stores one unverified quote
+// UserID       the unique ID of the submitting user
 // QuoteID      the unique ID of the unverified quote
 // TeacherID    the unique ID of the corresponding teacher
 // TeacherName  the name of the teacher if no TeacherID is given (e.g. new teacher)
@@ -44,6 +75,7 @@ type QuoteT struct {
 // Text         the text of the quote itself
 // Unixtime     the time of submission; optional
 type UnverifiedQuoteT struct {
+	UserID      int32
 	QuoteID     int32
 	TeacherID   int32
 	TeacherName string
@@ -68,7 +100,7 @@ type TeacherT struct {
 // UserID    the unique identifier of the user
 // Name      the user's name
 // Password  the user's password
-// Admin     flag if the user has admin priviliges 
+// Admin     flag if the user has admin priviliges
 type UserT struct {
 	UserID   int32
 	Name     string
@@ -76,6 +108,15 @@ type UserT struct {
 	Admin    bool
 }
 
+// VoteT stores one vote
+// UserID  the unique ID of the user voting
+// QuoteID the unique ID of the quote voted
+// Rating  the Rating in the range 1-5
+type VoteT struct {
+	UserID  int32
+	QuoteID int32
+	Val 	int8
+}
 
 /* -------------------------------------------------------------------------- */
 /*                          GLOBAL PACKAGE VARIABLES                          */
@@ -110,10 +151,11 @@ func Connect() error {
 		database = nil
 	}
 
-	param := os.ExpandEnv(`user=${DB_USER}
-		      	       password=${DB_PWD}
-		      	       dbname=${DB_NAME}
-			       sslmode=${DB_SSLMODE}`)
+	param := os.ExpandEnv(
+		`user=${DB_USER}
+		 password=${DB_PWD}
+		 dbname=${DB_NAME}
+		 sslmode=${DB_SSLMODE}`)
 	log.Print(param)
 	database, err = sql.Open("postgres", param)
 	if err != nil {
@@ -149,9 +191,9 @@ func Initialize() error {
 	// for more information see TeachersT declaration
 	_, err = database.Exec(
 		`CREATE TABLE IF NOT EXISTS teachers (
-		TeacherID serial PRIMARY KEY, 
-		Name varchar, 
-		Title varchar, 
+		TeacherID serial PRIMARY KEY,
+		Name varchar,
+		Title varchar,
 		Note varchar)`)
 	if err != nil {
 		database.Close()
@@ -163,29 +205,13 @@ func Initialize() error {
 	_, err = database.Exec(
 		`CREATE TABLE IF NOT EXISTS quotes (
 		QuoteID serial PRIMARY KEY,
-		TeacherID integer REFERENCES teachers (TeacherID) ON DELETE CASCADE, 
-		Context varchar,
-		Text varchar,
-		Unixtime bigint,
-		Upvotes integer)`)
-	if err != nil {
-		database.Close()
-		return DBError{ "Initialize: creating quotes table failed", err }
-	}
-
-	// Create unverifiedQuotes table in database if it doesn't exist
-	// for more information see UnverifiedQuoteT declaration
-	_, err = database.Exec(
-		`CREATE TABLE IF NOT EXISTS unverifiedQuotes (
-		QuoteID serial PRIMARY KEY,
-		TeacherID integer REFERENCES teachers (TeacherID) ON DELETE CASCADE, 
-		TeacherName varchar, 
+		TeacherID integer REFERENCES teachers (TeacherID) ON DELETE CASCADE,
 		Context varchar,
 		Text varchar,
 		Unixtime bigint)`)
 	if err != nil {
 		database.Close()
-		return DBError{ "Initialize: creating unverifiedQuotes table failed", err }
+		return DBError{ "Initialize: creating quotes table failed", err }
 	}
 
 	// Create users table in database if it doesn't exist
@@ -199,6 +225,34 @@ func Initialize() error {
 	if err != nil {
 		database.Close()
 		return DBError{ "Initialize: creating users table failed", err }
+	}
+
+	// Create unverifiedQuotes table in database if it doesn't exist
+	// for more information see UnverifiedQuoteT declaration
+	_, err = database.Exec(
+		`CREATE TABLE IF NOT EXISTS unverifiedQuotes (
+		UserID integer REFERENCES users (UserID) ON DELETE CASCADE,
+		QuoteID serial PRIMARY KEY,
+		TeacherID integer REFERENCES teachers (TeacherID) ON DELETE CASCADE,
+		TeacherName varchar,
+		Context varchar,
+		Text varchar,
+		Unixtime bigint)`)
+	if err != nil {
+		database.Close()
+		return DBError{ "Initialize: creating unverifiedQuotes table failed", err }
+	}
+
+	// Create votes table in database if it doesn't exist
+	_, err = database.Exec(
+		`CREATE TABLE IF NOT EXISTS votes (
+		Hash bigint PRIMARY KEY,
+		UserID integer REFERENCES users (UserID) ON DELETE CASCADE,
+		QuoteID integer REFERENCES quotes (QuoteID) ON DELETE CASCADE,
+		Rating smallint)`)
+	if err != nil {
+		database.Close()
+		return DBError{ "Initialize: creating votes table failed", err }
 	}
 
 	unsafeLoadCache()
@@ -247,25 +301,12 @@ func ExecuteQuery(query string) error {
 /*                          EXPORTED QUOTES FUNCTIONS                         */
 /* -------------------------------------------------------------------------- */
 
-// GetAllQuotes returns a slice containing all quotes.
-// The weight variable will be zero.
-//
-// Possible returned error type: generic
-func GetAllQuotes() ([]QuoteT, error) {
-	if database == nil {
-		return nil, errors.New("GetQuotes: not connected to database")
-	}
-
-	globalMutex.MinorLock()
-	defer globalMutex.MinorUnlock()
-
-	// get quotes from cache
-	return unsafeGetAllQuotesFromCache(), nil
-}
-
 // GetNQuotesFrom returns a slice containing n quotes
 // starting from index from. May return fewer than n quotes.
 // The weight variable will be zero
+//
+// THIS FUNCTION IS OUTDATED
+//
 func GetNQuotesFrom(n, from int) ([]QuoteT, error) {
 	if database == nil {
 		return nil, errors.New("GetQuotes: not connected to database")
@@ -276,6 +317,18 @@ func GetNQuotesFrom(n, from int) ([]QuoteT, error) {
 
 	// get quotes from cache
 	return unsafeGetNQuotesFromFromCache(n, from), nil
+}
+
+// GetNSortedQuotesFrom returns n quotes starting with index from, as returned by indexFn
+func GetNSortedQuotesFrom(n, from int, indexFn indexFunction) ([]QuoteT, error) {
+	if database == nil {
+		return nil, errors.New("GetNSortedQuotesFrom: not connected to database")
+	}
+
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
+
+	return unsafeGetQuotesFromIndexedCache(n, from, indexFn), nil
 }
 
 // GetQuotesAmount returns how many quotes there are
@@ -355,8 +408,8 @@ func CreateQuote(q QuoteT) error {
 
 	// add quote to database
 	err = database.QueryRow(
-		`INSERT INTO quotes (TeacherID, Context, Text, Unixtime, Upvotes) VALUES ($1, $2, $3, $4, $5) RETURNING QuoteID`,
-		q.TeacherID, q.Context, q.Text, q.Unixtime, q.Upvotes).Scan(&q.QuoteID)
+		`INSERT INTO quotes (TeacherID, Context, Text, Unixtime) VALUES ($1, $2, $3, $4) RETURNING QuoteID`,
+		q.TeacherID, q.Context, q.Text, q.Unixtime).Scan(&q.QuoteID)
 	if err != nil {
 		if strings.Contains(err.Error(), "violates foreign key constraint") {
 			return InvalidTeacherIDError{ "CreateQuote: no teacher with given TeacherID" }
@@ -367,11 +420,13 @@ func CreateQuote(q QuoteT) error {
 	// add quote to cache
 	unsafeAddQuoteToCache(q)
 
+	unsafeForceCacheIndexGen()
+
 	return nil
 }
 
 // UpdateQuote updates an existing quote by given QuoteID.
-// Upvotes and Unixtime fields will be ignored.
+// Voted, Upvotes and Unixtime fields will be ignored.
 //
 // Possible returned error types: generic / DBError / InvalidTeacherIDError / InvalidQuoteIDError
 func UpdateQuote(q QuoteT) error {
@@ -423,6 +478,8 @@ func UpdateQuote(q QuoteT) error {
 		log.Print("DATABASE: Cache is out of sync with database, trying to reload")
 		go Initialize()
 	}
+
+	unsafeForceCacheIndexGen()
 
 	return nil
 }
@@ -476,6 +533,8 @@ func DeleteQuote(ID int32) error {
 		log.Print("DATABASE: Cache is out of sync with database, trying to reload")
 		go Initialize()
 	}
+
+	unsafeForceCacheIndexGen()
 
 	return nil
 }
@@ -686,9 +745,10 @@ func GetUnverifiedQuotes() ([]UnverifiedQuoteT, error) {
 
 	// get all unverifiedQuotes from database
 	rows, err := database.Query(`SELECT
+		UserID,
 		QuoteID,
-		TeacherID, 
-		TeacherName, 
+		TeacherID,
+		TeacherName,
 		Context,
 		Text,
 		Unixtime FROM unverifiedQuotes`)
@@ -705,7 +765,7 @@ func GetUnverifiedQuotes() ([]UnverifiedQuoteT, error) {
 		var q UnverifiedQuoteT
 		var TeacherID sql.NullInt32
 
-		err := rows.Scan(&q.QuoteID, &TeacherID, &q.TeacherName, &q.Context, &q.Text, &q.Unixtime)
+		err := rows.Scan(&q.UserID, &q.QuoteID, &TeacherID, &q.TeacherName, &q.Context, &q.Text, &q.Unixtime)
 		if err != nil {
 			return nil, DBError{ "GetUnverifiedQuotes: parsing unverifiedQuotes failed", err }
 		}
@@ -742,8 +802,9 @@ func GetUnverifiedQuoteByID(ID int32) (UnverifiedQuoteT, error) {
 
 	// Query database
 	rows, err := database.Query(`SELECT
-		TeacherID, 
-		TeacherName, 
+		UserID,
+		TeacherID,
+		TeacherName,
 		Context,
 		Text,
 		Unixtime FROM unverifiedQuotes WHERE QuoteID=$1`, ID)
@@ -759,7 +820,7 @@ func GetUnverifiedQuoteByID(ID int32) (UnverifiedQuoteT, error) {
 	var q UnverifiedQuoteT
 	var TeacherID sql.NullInt32
 
-	err = rows.Scan(&TeacherID, &q.TeacherName, &q.Context, &q.Text, &q.Unixtime)
+	err = rows.Scan(&q.UserID, &TeacherID, &q.TeacherName, &q.Context, &q.Text, &q.Unixtime)
 	if err != nil {
 		return UnverifiedQuoteT{}, DBError{ "GetUnverifiedQuoteByID: parsing unverifiedQuotes failed", err }
 	}
@@ -794,11 +855,11 @@ func CreateUnverifiedQuote(q UnverifiedQuoteT) error {
 		return DBError{ "CreateUnverifiedQuote: pinging database failed", err }
 	}
 
-	// add quote to database
+	// add quote to database - by ID or by name
 	if q.TeacherID != 0 {
 		_, err = database.Exec(
-			`INSERT INTO unverifiedQuotes (TeacherID, TeacherName, Context, Text, Unixtime) VALUES ($1, $2, $3, $4, $5)`,
-			q.TeacherID, q.TeacherName, q.Context, q.Text, q.Unixtime)
+			`INSERT INTO unverifiedQuotes (UserID, TeacherID, TeacherName, Context, Text, Unixtime) VALUES ($1, $2, $3, $4, $5, $6)`,
+			q.UserID, q.TeacherID, q.TeacherName, q.Context, q.Text, q.Unixtime)
 		if err != nil {
 			if strings.Contains(err.Error(), "violates foreign key constraint") {
 				return InvalidTeacherIDError{ "CreateUnverifiedQuote: no teacher with given TeacherID" }
@@ -807,8 +868,8 @@ func CreateUnverifiedQuote(q UnverifiedQuoteT) error {
 		}
 	} else {
 		_, err = database.Exec(
-			`INSERT INTO unverifiedQuotes (TeacherID, TeacherName, Context, Text, Unixtime) VALUES ($1, $2, $3, $4, $5)`,
-			nil, q.TeacherName, q.Context, q.Text, q.Unixtime)
+			`INSERT INTO unverifiedQuotes (UserID, TeacherID, TeacherName, Context, Text, Unixtime) VALUES ($1, $2, $3, $4, $5, $6)`,
+			q.UserID, nil, q.TeacherName, q.Context, q.Text, q.Unixtime)
 		if err != nil {
 			return DBError{ "CreateUnverifiedQuote: inserting quote into database failed", err }
 		}
@@ -818,7 +879,7 @@ func CreateUnverifiedQuote(q UnverifiedQuoteT) error {
 }
 
 // UpdateUnverifiedQuote updates an unverified quote.
-// Unixtime field will be ignored.
+// UserID and Unixtime field will be ignored.
 //
 // Possible returned error types: generic / DBError / InvalidTeacherIDError / InvalidQuoteIDError
 func UpdateUnverifiedQuote(q UnverifiedQuoteT) error {
@@ -908,7 +969,7 @@ func DeleteUnverifiedQuote(ID int32) error {
 func IsUser(name string, password string) int32 {
 	globalMutex.MinorLock()
 	defer globalMutex.MinorUnlock()
-	
+
 	return unsafeGetUserFromCache(name, password).UserID
 }
 
@@ -927,4 +988,111 @@ func IsAdmin(name string, password string) int32 {
 		return user.UserID
 	}
 	return 0
+}
+
+// GetUsernameByID fetches a user's username using their UserID from the database
+//
+// Possible returned error types: generic / DBError / InvalidUserIDError
+func GetUsernameByID(userid int32) (string, error) {
+	if database == nil {
+		return "", errors.New("GetUsernameByID: not connected to database")
+	}
+
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
+
+	// get matching user from database
+	rows, err := database.Query(`SELECT Name FROM users WHERE UserID=$1`, userid)
+	if err != nil {
+		return "", DBError{ "GetUsernameByID: loading users from database failed", err }
+	}
+
+	var username string
+
+	// Iterate over the one matching user
+	if rows.Next() {
+		// Get user data
+
+		err := rows.Scan(&username)
+		if err != nil {
+			return "", DBError{ "GetUsernameByID: parsing user data failed", err }
+		}
+	} else {
+		// User not found
+		return "", InvalidUserIDError{ "GetUsernameByID: no matching user found" }
+	}
+
+	return username, nil
+}
+
+// AddUserDataToQuotes adds all the user specific information to the quotes
+func AddUserDataToQuotes(quotes []QuoteT, userid int32) error {
+	if userid < 1 {
+		// userid must be greater than zero to be a valid UserID
+		return errors.New("AddUserDataToQuotes: invalid UserID, must be greater than zero")
+	}
+
+	globalMutex.MinorLock()
+	defer globalMutex.MinorUnlock()
+
+	for i := range quotes {
+		unsafeAddUserDataToQuote(&quotes[i], userid)
+	}
+
+	return nil
+}
+
+/* -------------------------------------------------------------------------- */
+/*                          EXPORTED VOTING FUNCTIONS                         */
+/* -------------------------------------------------------------------------- */
+
+// AddVote adds a vote with Rating (1-5) from one user for one quote to the database
+// Possible returned error types: generic / DBError / InvalidQuoteIDError
+func AddVote(vote VoteT) (QuoteT, error) {
+	if vote.UserID < 1 {
+		// u must be greater than zero to be a valid UserID
+		return QuoteT{}, errors.New("AddVote: invalid UserID, must be greater than zero")
+	}
+
+	if vote.Val < 1 || vote.Val > 5 {
+		return QuoteT{}, fmt.Errorf("AddVote: invalid Rating, must be in range %d-%d", VoteMin, VoteMax)
+	}
+
+	// Verify connection to database
+	err := database.Ping()
+	if err != nil {
+		database.Close()
+		return QuoteT{}, DBError{ "AddVote: pinging database failed", err }
+	}
+
+	// add vote to database, update if necessary
+	_, err = database.Exec(
+		`INSERT INTO votes (Hash, UserID, QuoteID, Rating) VALUES ($1, $2, $3, $4)
+		 ON CONFLICT (Hash) DO UPDATE SET
+			UserID=EXCLUDED.UserID, QuoteID=EXCLUDED.QuoteID, Rating=EXCLUDED.Rating;`,
+		voteHash(vote), vote.UserID, vote.QuoteID, vote.Val)
+
+	if err != nil {
+		if strings.Contains(err.Error(), "violates foreign key constraint \"votes_quoteid_fkey\"") {
+			return QuoteT{}, InvalidQuoteIDError{ "AddVoteIDError: QuoteID unknown" }
+		}
+		return QuoteT{}, DBError{ "AddVote: inserting vote into database failed", err }
+	}
+
+	globalMutex.MajorLock()
+	defer globalMutex.MajorUnlock()
+
+	// add vote to cache
+	quote, err := unsafeAddVoteToCache(vote)
+
+	requestCacheIndexGen()
+	return quote, err
+}
+
+/* -------------------------------------------------------------------------- */
+/*                         UNEXPORTED HELPER FUNCTIONS                        */
+/* -------------------------------------------------------------------------- */
+
+func voteHash(vote VoteT) int64 {
+	return int64(vote.UserID)<<32 | int64(vote.QuoteID)
 }

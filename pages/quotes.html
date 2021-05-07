@@ -1,14 +1,14 @@
 {{define "NAVIGATION"}}
 <div class="navigation">
-	<a class="first boxbutton-slim" {{if eq -1 .Prev}}disabled{{else}}href="?page=0"{{end}}>&lt;&lt;</a>
+	<a class="first boxbutton-slim" {{if eq -1 .Prev}}disabled{{else}}href="?page=0&sorting={{$.CurrentSorting}}"{{end}}>&lt;&lt;</a>
 	&nbsp;
-	<a class="previous boxbutton-slim" {{if eq -1 .Prev}}disabled{{else}}href="?page={{.Prev}}"{{end}}>&lt;</a>
+	<a class="previous boxbutton-slim" {{if eq -1 .Prev}}disabled{{else}}href="?page={{.Prev}}&sorting={{$.CurrentSorting}}"{{end}}>&lt;</a>
 	&nbsp;
 	<span class="pageIndex">Seite {{inc .Current}} von {{inc .Last}}</span>
 	&nbsp;
-	<a class="next boxbutton-slim" {{if eq -1 .Next}}disabled{{else}}href="?page={{.Next}}"{{end}}>&gt;</a>
+	<a class="next boxbutton-slim" {{if eq -1 .Next}}disabled{{else}}href="?page={{.Next}}&sorting={{$.CurrentSorting}}"{{end}}>&gt;</a>
 	&nbsp;
-	<a class="last boxbutton-slim" {{if eq .Current .Last}}disabled{{else}}href="?page={{.Last}}"{{end}}>&gt;&gt;</a>
+	<a class="last boxbutton-slim" {{if eq .Current .Last}}disabled{{else}}href="?page={{.Last}}&sorting={{$.CurrentSorting}}"{{end}}>&gt;&gt;</a>
 </div>
 {{end}}
 
@@ -22,23 +22,69 @@
 </head>
 <body>
 	<h1>Lehrerzitate</h1>
+
 	<div class="buttonrow">
 		<a class="boxbutton" href="/submit">Zitat einsenden</a>
 		{{if .IsAdmin}}
 		<a class="boxbutton" href="/admin">Adminbereich</a>
 		{{end}}
 	</div>
+
+	<form>
+		<label for="sortingselect" style="display: inline;">sortieren nach:</label>
+		<select id="sortingselect" style="display: inline;" name="sorting" onchange="this.form.submit()">
+			{{range .SortingOrder}}
+			<option value="{{.}}" {{if eq . $.CurrentSorting}}selected{{end}}>{{(index $.SortingMap .).Name}}</option>
+			{{end}}
+		</select>
+	</form>
+
 	{{template "NAVIGATION" .}}
+
 	<div class="quotelist">
 		{{range .Quotes}}
 		<div class="quote">
-			<i><span class="id">Zitat #{{.QuoteID}}</span></i><br>
-			{{if .Context}}Situation: {{.Context}}<br>{{end}}
-			<span class="text" style="display:block">„{{.Text}}“</span>
+			<!--<span class="id"><i>Zitat #{{.QuoteID}}</i></span>-->
+			{{if .Context}}<span class="context">Situation: {{.Context}}</span>{{end}}
+			<span class="text">„{{.Text}}“</span>
 			<span class="teacher">~ {{with (GetTeacherByID .TeacherID)}}{{.Title}} {{.Name}}{{if .Note}} ({{.Note}}){{end}}{{end}}</span>
+			<div class="rating">
+				<div onclick="voteFor(this, {{.QuoteID}}, 1)" class="votebutton {{if eq .MyVote 1}}selected{{end}}">
+					<img id="votebtn-{{.QuoteID}}-1" src="/static/1f616.svg" >
+					<div style="--score: {{div (index .Stats.Data 0) .Stats.Num}}; {{if .MyVote}}opacity: 1;{{end}}" class="stats"></div>
+				</div>
+				<div onclick="voteFor(this, {{.QuoteID}}, 2)" class="votebutton {{if eq .MyVote 2}}selected{{end}}">
+					<img id="votebtn-{{.QuoteID}}-2" src="/static/1f641.svg" >
+					<div style="--score: {{div (index .Stats.Data 1) .Stats.Num}}; {{if .MyVote}}opacity: 1;{{end}}" class="stats"></div>
+				</div>
+				<div onclick="voteFor(this, {{.QuoteID}}, 3)" class="votebutton {{if eq .MyVote 3}}selected{{end}}">
+					<img id="votebtn-{{.QuoteID}}-3" src="/static/1f610.svg" >
+					<div style="--score: {{div (index .Stats.Data 2) .Stats.Num}}; {{if .MyVote}}opacity: 1;{{end}}" class="stats"></div>
+				</div>
+				<div onclick="voteFor(this, {{.QuoteID}}, 4)" class="votebutton {{if eq .MyVote 4}}selected{{end}}">
+					<img id="votebtn-{{.QuoteID}}-4" src="/static/1f603.svg" >
+					<div style="--score: {{div (index .Stats.Data 3) .Stats.Num}}; {{if .MyVote}}opacity: 1;{{end}}" class="stats"></div>
+				</div>
+				<div onclick="voteFor(this, {{.QuoteID}}, 5)" class="votebutton {{if eq .MyVote 5}}selected{{end}}">
+					<img id="votebtn-{{.QuoteID}}-5" src="/static/1f602.svg" >
+					<div style="--score: {{div (index .Stats.Data 4) .Stats.Num}}; {{if .MyVote}}opacity: 1;{{end}}" class="stats"></div>
+				</div>
+
+			</div>
 		</div>
+
 		{{end}}
 	</div>
+
 	{{template "NAVIGATION" .}}
+
+	<footer>
+		<span>Emoji-Grafiken: <a href="https://github.com/twitter/twemoji">twemoji</a> von <a href="https://twitter.github.io/">TwitterOSS</a>,
+			lizenziert per <a href="http://creativecommons.org/licenses/by/4.0/deed.de">CC-BY 4.0</a></span>
+	</footer>
+
+	<script src="/static/axios.min.js"></script>
+	<script src="/static/axioshelpers.js"></script>
+	<script src="/static/quotevote.js"></script>
 </body>
 </html>
