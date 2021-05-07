@@ -3,8 +3,6 @@ animationmap = {};
 function voteFor(button, quoteid, rating) {
   if (button.classList.contains("selected")) return;
 
-  let done = false;
-
   for (sibling of button.parentElement.children) {
     if (sibling == button) {
       sibling.classList.add("loading");
@@ -40,17 +38,6 @@ function voteFor(button, quoteid, rating) {
                 res.data["Data"][i] / res.data["Num"]
               );
             }
-          }
-          // slider for popularity score
-          if ("Pop" in res.data) {
-            button.parentElement.children[5].style.setProperty(
-              "--score",
-              res.data["Pop"]
-            );
-            button.parentElement.children[5].style.setProperty(
-              "display",
-              "unset"
-            );
           }
         }
         return Promise.resolve(res);
