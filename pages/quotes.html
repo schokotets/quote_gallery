@@ -51,23 +51,23 @@
 			<div class="rating">
 				<div onclick="voteFor(this, {{.QuoteID}}, 1)" class="votebutton {{if eq .MyVote 1}}selected{{end}}">
 					<img id="votebtn-{{.QuoteID}}-1" src="/static/1f616.svg" >
-					<div style="--score: {{div (index .Stats.Data 0) .Stats.Num}};" class="stats"></div>
+					<div style="--score: {{div (index .Stats.Data 0) .Stats.Num}}; {{if .MyVote}}opacity: 1;{{end}}" class="stats"></div>
 				</div>
 				<div onclick="voteFor(this, {{.QuoteID}}, 2)" class="votebutton {{if eq .MyVote 2}}selected{{end}}">
 					<img id="votebtn-{{.QuoteID}}-2" src="/static/1f641.svg" >
-					<div style="--score: {{div (index .Stats.Data 1) .Stats.Num}};" class="stats"></div>
+					<div style="--score: {{div (index .Stats.Data 1) .Stats.Num}}; {{if .MyVote}}opacity: 1;{{end}}" class="stats"></div>
 				</div>
 				<div onclick="voteFor(this, {{.QuoteID}}, 3)" class="votebutton {{if eq .MyVote 3}}selected{{end}}">
 					<img id="votebtn-{{.QuoteID}}-3" src="/static/1f610.svg" >
-					<div style="--score: {{div (index .Stats.Data 2) .Stats.Num}};" class="stats"></div>
+					<div style="--score: {{div (index .Stats.Data 2) .Stats.Num}}; {{if .MyVote}}opacity: 1;{{end}}" class="stats"></div>
 				</div>
 				<div onclick="voteFor(this, {{.QuoteID}}, 4)" class="votebutton {{if eq .MyVote 4}}selected{{end}}">
 					<img id="votebtn-{{.QuoteID}}-4" src="/static/1f603.svg" >
-					<div style="--score: {{div (index .Stats.Data 3) .Stats.Num}};" class="stats"></div>
+					<div style="--score: {{div (index .Stats.Data 3) .Stats.Num}}; {{if .MyVote}}opacity: 1;{{end}}" class="stats"></div>
 				</div>
 				<div onclick="voteFor(this, {{.QuoteID}}, 5)" class="votebutton {{if eq .MyVote 5}}selected{{end}}">
 					<img id="votebtn-{{.QuoteID}}-5" src="/static/1f602.svg" >
-					<div style="--score: {{div (index .Stats.Data 4) .Stats.Num}};" class="stats"></div>
+					<div style="--score: {{div (index .Stats.Data 4) .Stats.Num}}; {{if .MyVote}}opacity: 1;{{end}}" class="stats"></div>
 				</div>
 
 			</div>

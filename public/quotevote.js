@@ -37,6 +37,10 @@ function voteFor(button, quoteid, rating) {
                 "--score",
                 res.data["Data"][i] / res.data["Num"]
               );
+              button.parentElement.children[i].children[1].style.setProperty(
+                "opacity",
+                1
+              );
             }
           }
         }

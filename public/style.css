@@ -141,10 +141,12 @@ input, select {
   top: 0;
   height: 100%;
   --score: 0;
+  opacity: 0;
+  transition: opacity 0.5s;
 }
 
 .quote .votebutton .stats:before {
-  top: calc( 100% - var(--score) * (100% + 0.5px) );
+  top: calc( 100% - var(--score) * (100% + 1px) );
   height: calc( var(--score) * 100% );
   transition: height 1s, top 1s;
   content: '';
