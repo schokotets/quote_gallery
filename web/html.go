@@ -44,14 +44,28 @@ func pageRoot(w http.ResponseWriter, r *http.Request, userID int32, isAdmin bool
 		nextPage = -1
 	}
 
-	quotes, err := database.GetNQuotesFrom(quotesPerPage, currentPage*quotesPerPage)
+	var indexHandler *database.IndexHandler
+	if sortQuery, ok := r.URL.Query()["sorting"]; ok {
+		sorting := sortQuery[0]
+		if ih, ok := database.IndexHandlers[sorting]; ok {
+			indexHandler = &ih
+		}
+	}
+
+	if indexHandler == nil {
+		ih, _ := database.IndexHandlers[database.DefaultIndexHandlerName]
+		indexHandler = &ih
+	}
+
+
+	quotes, err := database.GetNSortedQuotesFrom(quotesPerPage, currentPage*quotesPerPage, indexHandler.Function)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	if quotes == nil {
-		quotes, err = database.GetNQuotesFrom(quotesPerPage, 0)
+		quotes, err = database.GetNSortedQuotesFrom(quotesPerPage, 0, indexHandler.Function)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
