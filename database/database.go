@@ -6,6 +6,7 @@ import (
 	"log"
 	"sort"
 	"strings"
+	"os"
 
 	// loading postgresql driver
 	_ "github.com/lib/pq"
@@ -109,12 +110,12 @@ func Connect() error {
 		database = nil
 	}
 
-	database, err = sql.Open(
-		"postgres",
-		`user=postgres 
-		password=1234 
-		dbname=quote_gallery 
-		sslmode=disable`)
+	param := os.ExpandEnv(`user=${DB_USER}
+		      	       password=${DB_PWD}
+		      	       dbname=${DB_NAME}
+			       sslmode=${DB_SSLMODE}`)
+	log.Print(param)
+	database, err = sql.Open("postgres", param)
 	if err != nil {
 		return DBError{ "Connect: connecting to database failed", err }
 	}
