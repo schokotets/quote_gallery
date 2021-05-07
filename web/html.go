@@ -96,6 +96,7 @@ func pageRoot(w http.ResponseWriter, r *http.Request, userID int32, isAdmin bool
 
 	tmpl := template.Must(template.New("quotes.html").Funcs(template.FuncMap{
 		"inc": func (i int) int { return i+1 },
+		"div": func (a, b int32) string { return fmt.Sprintf("%.3f", float32(a)/float32(b)) },
 		"GetTeacherByID": database.GetTeacherByID,
 	}).ParseFiles("pages/quotes.html"))
 	tmpl.Execute(w, data)
