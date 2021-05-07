@@ -35,22 +35,25 @@ var cacheIndexingMux Mutex = Mutex{unlocked, 0, false}
 var refreshNecessary bool = false
 var t *time.Timer = nil
 
-// var indexFunctions = [6]func(quoteSlice []QuoteT, n, from int) {
-// 	byTimeDesc,	// 0: latest first
-// 	byTimeAsce, // 1: oldest first
-// 	byPopDesc,  // 2: most popular first
-// 	byPopAsce, 	// 3: least popular first
-// 	byConDesc,	// 4: most controversial first
-// 	byConAsce,	// 5: least controversial first
-// }
+type indexFunction func(quoteSlice []QuoteT, n, from int)
 
-var indexFunctions = map[string]func(quoteSlice []QuoteT, n, from int) {
-	"TimeDesc":	TimeDesc,
-	"TimeAsce":	TimeAsce,
-	"PopDesc":  PopDesc,
-	"PopAsce":  PopAsce,
-	"ConDesc":  ConDesc,
-	"ConAsce":  ConAsce,
+// IndexHandler contains an indexing function and its sorting name
+type IndexHandler struct {
+	Function indexFunction
+	Name string
+}
+
+// DefaultIndexHandlerName is used by the frontend
+var DefaultIndexHandlerName = "timeDesc"
+
+// IndexHandlers maps indexing names to corresponding functions and sorting names
+var IndexHandlers = map[string]IndexHandler {
+	"timeDesc": { timeDesc, "Zeit (neueste zuerst)" },
+	"timeAsce": { timeAsce, "Zeit (älteste zuerst)" },
+	"popDesc":  { popDesc,  "Beliebteste (beste zuerst)" },
+	"popAsce":  { popAsce,  "Beliebteste (schlechteste zuerst)" },
+	"conDesc":  { conDesc,  "Kontroversität (kontroverseste zuerst)" },
+	"conAsce":  { conAsce,  "Kontroversität (kontroverseste zuletzt)" },
 }
 
 /* -------------------------------------------------------------------------- */
@@ -94,12 +97,11 @@ func requestCacheIndexGen() error {
 }
 
 // unsafeGetQuotesFromIndexedCache
-// n		 number of quotes to get
-// from		 starting index
-// indexType type of indexing, refer to indexFuntions
-func unsafeGetQuotesFromIndexedCache(n, from int, indexType string) ([]QuoteT) {
-	indexFuntion, ok := indexFunctions[indexType]
-	if !ok {
+// n         number of quotes to get
+// from	     starting index
+// indexFn   one of the indexFunctions
+func unsafeGetQuotesFromIndexedCache(n, from int, indexFn indexFunction) ([]QuoteT) {
+	if indexFn == nil {
 		return nil
 	}
 
@@ -199,15 +201,17 @@ func handler() {
 /*                             INDEXING FUNCTIONS                             */
 /* -------------------------------------------------------------------------- */
 
-// indexType: 0
-func TimeDesc(quoteSlice []QuoteT, n, from int) {
+// fills the given quoteSlice with n quotes starting with index from
+// sorted by descending time
+func timeDesc(quoteSlice []QuoteT, n, from int) {
 	for i := 0; i < n; i++ {
 		quoteSlice[i] = cache.quoteSlice[ quoteIndexByTime[from + i] ]
 	}
 }
 
-// indexType: 1
-func TimeAsce(quoteSlice []QuoteT, n, from int) {
+// fills the given quoteSlice with n quotes starting with index from
+// sorted by ascending time
+func timeAsce(quoteSlice []QuoteT, n, from int) {
 	// calculate real starting index, because of reversed order
 	from = len(quoteIndexByTime) - from - 1
 
@@ -216,15 +220,17 @@ func TimeAsce(quoteSlice []QuoteT, n, from int) {
 	}
 }
 
-// indexType: 2
-func PopDesc(quoteSlice []QuoteT, n, from int) {
+// fills the given quoteSlice with n quotes starting with index from
+// sorted by descending popularity
+func popDesc(quoteSlice []QuoteT, n, from int) {
 	for i := 0; i < n; i++ {
 		quoteSlice[i] = cache.quoteSlice[ quoteIndexByPop[from + i] ]
 	}
 }
 
-// indexType: 3
-func PopAsce(quoteSlice []QuoteT, n, from int) {
+// fills the given quoteSlice with n quotes starting with index from
+// sorted by ascending popularity
+func popAsce(quoteSlice []QuoteT, n, from int) {
 	// calculate real starting index, because of reversed order
 	from = len(quoteIndexByTime) - from - 1
 
@@ -233,15 +239,17 @@ func PopAsce(quoteSlice []QuoteT, n, from int) {
 	}
 }
 
-// indexType: 4
-func ConDesc(quoteSlice []QuoteT, n, from int) {
+// fills the given quoteSlice with n quotes starting with index from
+// sorted by descending description
+func conDesc(quoteSlice []QuoteT, n, from int) {
 	for i := 0; i < n; i++ {
 		quoteSlice[i] = cache.quoteSlice[ quoteIndexByCon[from + i] ]
 	}
 }
 
-// indexType: 5
-func ConAsce(quoteSlice []QuoteT, n, from int) {
+// fills the given quoteSlice with n quotes starting with index from
+// sorted by ascending description
+func conAsce(quoteSlice []QuoteT, n, from int) {
 	// calculate real starting index, because of reversed order
 	from = len(quoteIndexByTime) - from - 1
 
