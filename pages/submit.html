@@ -20,7 +20,7 @@
 		<label for="teacherselect">Lehrer:</label>
 		<select id="teacherselect" name="teacherid" required>
 			<option value="" selected disabled hidden></option>
-			<option value=""><i>selbst eingeben...</i></option>
+			<option value=" "><i>selbst eingeben...</i></option>
 			{{range .}}
 			<option value="{{.TeacherID}}">{{.Name}}, {{.Title}}{{if .Note}} ({{.Note}}){{end}}</option>
 			{{end}}
@@ -54,7 +54,7 @@
 		<div class="actionbuttons force1row">
 			<input id="submitbtn" type="submit" value="Einsenden" disabled="disabled">
 			&nbsp;
-			<button id="clearform">Leeren</button>
+			<button id="clearform" type="button">Leeren</button>
 		</div>
 
 	</form>

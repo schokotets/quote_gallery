@@ -38,7 +38,7 @@ function processForm(e) {
     req["Context"] = context;
   }
   let teacherid = teacherselect.value;
-  if (teacherid) {
+  if (teacherid && teacherid != " ") {
     req["Teacher"] = parseInt(teacherid);
   } else {
     let teachername = customteacherfield.value;
@@ -112,6 +112,7 @@ function quoteTextInput() {
 
   suggestionlist.innerText = "lädt...";
   hideConfirmDifferent();
+  disableSubmitButton();
   // fetchSimilarQuotes is run after 1s of inactivity
   lasttimeout = setTimeout(fetchSimilarQuotes, 1000);
 }
@@ -128,13 +129,13 @@ function showConfirmDifferent() {
   updateSubmitButtonState();
 }
 
-quotefield.addEventListener("change", updateSubmitButtonState);
+quotefield.addEventListener("change", updateSubmitButtonState.bind(this, undefined, true));
 teacherselect.addEventListener("change", updateSubmitButtonState);
 customteacherfield.addEventListener("change", updateSubmitButtonState);
-confirmdifferent.addEventListener("change", updateSubmitButtonState);
+confirmdifferentcheckbox.addEventListener("change", updateSubmitButtonState);
 customteachercheckbox.addEventListener("change", updateSubmitButtonState);
 
-function updateSubmitButtonState() {
+function updateSubmitButtonState(target, onlydisable) {
   let allrequiredfilled = true;
   for (let e of document.querySelectorAll("[required]")) {
     if (!e.value || (e.type == "checkbox" && !e.checked)) {
@@ -142,11 +143,19 @@ function updateSubmitButtonState() {
       break;
     }
   }
-  if (allrequiredfilled) {
-    submitbtn.removeAttribute("disabled");
+  if (allrequiredfilled && !onlydisable) {
+    enableSubmitButton();
   } else {
-    submitbtn.setAttribute("disabled", "disabled");
+    disableSubmitButton();
   }
+}
+
+function disableSubmitButton() {
+    submitbtn.setAttribute("disabled", "disabled");
+}
+
+function enableSubmitButton() {
+    submitbtn.removeAttribute("disabled");
 }
 
 function fetchSimilarQuotes() {
@@ -161,9 +170,11 @@ function fetchSimilarQuotes() {
       if (similarQuotesHTML) {
         suggestionlist.innerHTML = similarQuotesHTML;
         showConfirmDifferent();
+        updateSubmitButtonState();
       } else {
         suggestionlist.innerText = "Dein Zitat ist einzigartig, top :)";
         hideConfirmDifferent();
+        updateSubmitButtonState();
       }
     });
 }
