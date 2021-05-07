@@ -156,7 +156,7 @@ func Connect() error {
 		 password=${DB_PWD}
 		 dbname=${DB_NAME}
 		 sslmode=${DB_SSLMODE}`)
-	log.Print(param)
+
 	database, err = sql.Open("postgres", param)
 	if err != nil {
 		return DBError{ "Connect: connecting to database failed", err }
