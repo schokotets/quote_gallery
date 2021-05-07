@@ -46,6 +46,9 @@ type IndexHandler struct {
 // DefaultIndexHandlerName is used by the frontend
 var DefaultIndexHandlerName = "timeDesc"
 
+// IndexHandlerOrder is used by the frontend
+var IndexHandlerOrder = [6]string{"timeDesc", "timeAsce", "popDesc", "popAsce", "conDesc", "conAsce"}
+
 // IndexHandlers maps indexing names to corresponding functions and sorting names
 var IndexHandlers = map[string]IndexHandler {
 	"timeDesc": { timeDesc, "Zeit (neueste zuerst)" },

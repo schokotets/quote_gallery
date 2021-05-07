@@ -45,15 +45,18 @@ func pageRoot(w http.ResponseWriter, r *http.Request, userID int32, isAdmin bool
 	}
 
 	var indexHandler *database.IndexHandler
+	var indexHandlerKey string
 	if sortQuery, ok := r.URL.Query()["sorting"]; ok {
 		sorting := sortQuery[0]
 		if ih, ok := database.IndexHandlers[sorting]; ok {
 			indexHandler = &ih
+			indexHandlerKey = sorting
 		}
 	}
 
 	if indexHandler == nil {
-		ih, _ := database.IndexHandlers[database.DefaultIndexHandlerName]
+		indexHandlerKey = database.DefaultIndexHandlerName
+		ih, _ := database.IndexHandlers[indexHandlerKey]
 		indexHandler = &ih
 	}
 
@@ -86,7 +89,10 @@ func pageRoot(w http.ResponseWriter, r *http.Request, userID int32, isAdmin bool
 		Next	int
 		Last	int
 		IsAdmin bool
-	}{quotes, previousPage, currentPage, nextPage, lastPage, isAdmin}
+		SortingOrder [6]string
+		SortingMap map[string]database.IndexHandler
+		CurrentSorting string
+	}{quotes, previousPage, currentPage, nextPage, lastPage, isAdmin, database.IndexHandlerOrder, database.IndexHandlers, indexHandlerKey}
 
 	tmpl := template.Must(template.New("quotes.html").Funcs(template.FuncMap{
 		"inc": func (i int) int { return i+1 },
