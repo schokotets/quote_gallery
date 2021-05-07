@@ -11,6 +11,16 @@ services:
       - POSTGRES_DB=quote_gallery
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=1234
+  web:
+    image: schokotets/quote_gallery
+    build: .
+    ports:
+      - "80:80"
+    environment:
+      - DB_USER=postgres
+      - DB_PWD=1234
+      - DB_NAME=quote_gallery
+      - DB_SSLMODE=disable
 
 volumes:
   db-data:
