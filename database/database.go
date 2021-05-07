@@ -52,6 +52,7 @@ type QuoteT struct {
 	Unixtime  int64
 
 	Stats struct {
+		Num int32
 		Pop float32
 		Con float32
 		Data [VoteMax - VoteMin + 1]int32

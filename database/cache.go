@@ -577,10 +577,12 @@ func calculateQuoteStats(quote *QuoteT) {
 	if num == 0 {
 		quote.Stats.Pop = 0
 		quote.Stats.Con = 0
+		quote.Stats.Num = 0
 		return
 	}
 
 	quote.Stats.Pop = float32(sum) / float32( len(cache.userSlice) ) + VoteDefault
+	quote.Stats.Num = num
 
 	// Controversial ... ?
 	mean := float32(sum) / float32(num) + VoteDefault
