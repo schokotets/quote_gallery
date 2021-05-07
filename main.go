@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	log.Print("Connecting to database on :5432")
+	log.Print("Connecting to database")
 	database.Connect()
 	defer database.CloseAndClearCache()
 

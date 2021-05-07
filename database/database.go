@@ -152,7 +152,9 @@ func Connect() error {
 	}
 
 	param := os.ExpandEnv(
-		`user=${DB_USER}
+		`host=${DB_HOST}
+		 port=${DB_PORT}
+		 user=${DB_USER}
 		 password=${DB_PWD}
 		 dbname=${DB_NAME}
 		 sslmode=${DB_SSLMODE}`)

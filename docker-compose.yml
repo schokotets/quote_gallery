@@ -14,9 +14,13 @@ services:
   web:
     image: schokotets/quote_gallery
     build: .
+    depends_on:
+      - "db"
     ports:
       - "80:80"
     environment:
+      - DB_HOST=db
+      - DB_PORT=5432
       - DB_USER=postgres
       - DB_PWD=1234
       - DB_NAME=quote_gallery
