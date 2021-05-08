@@ -37,10 +37,14 @@ function processForm(e) {
   if (context || EDITING) {
     req["Context"] = context;
   }
-  let teacherid = teacherselect.value;
-  if (teacherid && teacherid != " ") {
-    req["Teacher"] = parseInt(teacherid);
-  } else {
+  let teachervalue = teacherselect.value;
+  if (teachervalue && teachervalue != " ") {
+    let teacherid = parseInt(teachervalue);
+    if (teacherid) {
+      req["Teacher"] = teacherid;
+    }
+  }
+  if (! ("Teacher" in req)) {
     let teachername = customteacherfield.value;
     if (teachername) {
       req["Teacher"] = teachername;
