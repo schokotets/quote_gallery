@@ -43,7 +43,7 @@
 					<div class="force1row">
 						<select id="teacherselect-{{.QuoteID}}" name="teacherselect-{{.QuoteID}}">
 							<option value="" selected disabled hidden>assign existing teacher</option>
-							{{range $.Teachers}}
+							{{range $.SortedTeachers}}
 							<option value="{{.TeacherID}}">{{.Name}}, {{.Title}}{{if .Note}} ({{.Note}}){{end}}</option>
 							{{end}}
 						</select>

@@ -118,18 +118,26 @@ func pageAdmin(w http.ResponseWriter, r *http.Request, u int32) {
 		return
 	}
 
+	sortedteachers := make([]database.TeacherT, len(teachers))
+	copy(sortedteachers, teachers)
+	sort.Slice(sortedteachers, func(i, j int) bool { return sortedteachers[i].Name < sortedteachers[j].Name })
+
+
 	sort.Slice(quotes, func(i, j int) bool { return quotes[i].Unixtime < quotes[j].Unixtime })
 	sort.Slice(teachers, func(i, j int) bool { return teachers[i].TeacherID < teachers[j].TeacherID })
 
 	_, showusers := r.URL.Query()["showusers"]
 
+
 	pagedata := struct {
 		Quotes []database.UnverifiedQuoteT
 		Teachers []database.TeacherT
+		SortedTeachers []database.TeacherT
 		ShowUsers bool
 	} {
 		quotes,
 		teachers,
+		sortedteachers,
 		showusers,
 	}
 
