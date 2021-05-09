@@ -71,6 +71,11 @@ p, label {
   display: inline-block;
 }
 
+.quote .votebutton img {
+  width: 1.9em;
+  height: 1.9em;
+}
+
 .quote .votebutton:first-child img {
   transform-origin: center 1em;
 }
