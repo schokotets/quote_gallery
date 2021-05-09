@@ -1,4 +1,3 @@
-let EDITING = window.location.pathname.includes("edit");
 let form = document.getElementById("form-submit");
 
 let quotefield = document.getElementById("quotefield");
@@ -34,7 +33,7 @@ function processForm(e) {
   req["Text"] = quotefield.value;
 
   let context = contextfield.value;
-  if (context || EDITING) {
+  if (context) {
     req["Context"] = context;
   }
   let teachervalue = teacherselect.value;
@@ -51,26 +50,11 @@ function processForm(e) {
     }
   }
 
-  let request;
-  if (EDITING) {
-    request = axios.put(
-      "/api/unverifiedquotes/" + window.location.pathname.split("/")[3],
-      req
-    );
-  } else {
-    request = axios.post("/api/quotes/submit", req);
-  }
-  request
+  axios.post("/api/quotes/submit", req);
     .then(function (res) {
       if (res.status == 200) {
         clearForm();
-        if (EDITING) {
-          //hiding form because chrome re-shows last input values
-          document.getElementById("form-submit").style.display = "none";
-          window.location = document.referrer;
-        } else {
-          alert("Erfolgreich eingesendet!");
-        }
+        alert("Erfolgreich eingesendet!");
       } else {
         return Promise.reject({ response: res });
       }
