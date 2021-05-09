@@ -50,7 +50,7 @@ function processForm(e) {
     }
   }
 
-  axios.post("/api/quotes/submit", req);
+  axios.post("/api/quotes/submit", req)
     .then(function (res) {
       if (res.status == 200) {
         clearForm();
